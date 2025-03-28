@@ -818,11 +818,6 @@ h1::after {
     border: 1px solid rgba(0,0,0,0.03);
 }
 
-.temp-item:hover {
-    transform: translateY(-2px);
-    background: rgba(0,0,0,0.03);
-}
-
 .temp-item.warning {
     background: rgba(255, 152, 0, 0.1);
     border-color: rgba(255, 152, 0, 0.2);
@@ -880,7 +875,6 @@ h1::after {
     box-shadow: var(--card-shadow);
     border: 1px solid rgba(0,0,0,0.03);
     transition: var(--transition);
-    position: relative;
 }
 
 .card:hover {
@@ -1000,4 +994,18 @@ h1::after {
     .processor-info {
         gap: 6px;
     }
-} 
+}
+
+/* 新增核心温度网格样式 */
+.core-temp-grid {
+    display: grid;
+    gap: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.core-item {
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: #f2f2f2;
+    text-align: center;
+}
