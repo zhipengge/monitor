@@ -1,29 +1,3 @@
-<think>
-我需要创建一个README文件，介绍这个硬件监控系统的功能、部署方式以及使用方法。基于我之前看到的代码和功能，我可以概括出以下内容：
-
-1. 项目简介：这是一个基于Web的硬件监控系统，用于实时监控计算机硬件性能。
-2. 功能特性：
-   - CPU监控（利用率、温度、频率）
-   - 内存监控（使用情况、频率、类型）
-   - GPU监控（利用率、显存使用、温度）
-   - 磁盘使用情况
-   - 网络速度监控
-   - 系统信息（主机名、运行时间）
-3. 技术栈：
-   - 后端：Flask（Python）
-   - 前端：HTML/CSS/JavaScript
-   - 硬件信息收集：psutil, GPUtil, cpuinfo等Python库
-4. 部署说明：
-   - 环境要求
-   - 安装步骤
-   - 运行指令
-5. 界面预览：提及images/hw_info.png图片
-6. 注意事项和已知问题
-7. 贡献和许可信息
-
-我会以这个结构来编写README.md。
-</think>
-
 # 硬件监控系统 (Hardware Monitor)
 
 ![硬件监控系统截图](images/hw_info.png)
@@ -173,11 +147,5 @@ sudo systemctl start hardware-monitor
 - 在某些虚拟环境中，部分硬件信息可能无法获取
 - 不同操作系统可能显示的信息有所不同
 - AMD GPUs可能信息不完整
-
-## 许可证
-
-MIT License
-
----
 
 如有问题或建议，请提交Issues或Pull Request。您的贡献将使这个项目变得更好！
