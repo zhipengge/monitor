@@ -1217,6 +1217,76 @@
         .gpu-freq-value {
             display: none;
         }
+
+        /* 内存频率信息样式 */
+        .memory-info {
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+        }
+        
+        .memory-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .memory-info-value {
+            color: #20c997;
+            font-weight: bold;
+        }
+        
+        /* GPU频率信息样式 */
+        .gpu-specs-details {
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .gpu-spec-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .gpu-spec-detail-value {
+            color: #00c3ff;
+            font-weight: bold;
+        }
+        
+        /* 网络速度显示样式 */
+        .system-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .network-speed {
+            display: flex;
+            align-items: center;
+            margin: 0 10px;
+        }
+        
+        .network-icon {
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .download-speed {
+            color: #00c3ff;
+        }
+        
+        .upload-speed {
+            color: #20c997;
+        }
     </style>
 </head>
 
@@ -1236,6 +1306,16 @@
             <div class="system-item">
                 <i class="system-icon">⏱️</i>
                 <span>{{ system.uptime }}</span>
+            </div>
+            <div class="system-item">
+                <div class="network-speed download-speed">
+                    <i class="fas fa-arrow-down network-icon"></i>
+                    <span id="download-speed">0 KB/s</span>
+                </div>
+                <div class="network-speed upload-speed">
+                    <i class="fas fa-arrow-up network-icon"></i>
+                    <span id="upload-speed">0 KB/s</span>
+                </div>
             </div>
         </div>
     </div>
@@ -1326,6 +1406,20 @@
                 内存信息不可用
             {% endif %}
         </div>
+        <div class="memory-info">
+            <div class="memory-info-item">
+                <span>类型:</span>
+                <span class="memory-info-value" id="memory-type">{{ memory.type if memory and memory.type else 'Unknown' }}</span>
+            </div>
+            <div class="memory-info-item">
+                <span>频率:</span>
+                <span class="memory-info-value" id="memory-frequency">{{ memory.frequency if memory and memory.frequency else 'Unknown' }} MHz</span>
+            </div>
+            <div class="memory-info-item">
+                <span>通道:</span>
+                <span class="memory-info-value" id="memory-channels">{{ memory.channels if memory and memory.channels else 'Unknown' }}</span>
+            </div>
+        </div>
     </div>
 
     <!-- 将GPU信息整合到monitor-card中 -->
@@ -1340,11 +1434,11 @@
             <div class="gpu-specs">
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">核心频率:</span>
-                    <span class="gpu-spec-value">{{ gpu.core_clock if gpu.core_clock is defined else 'N/A' }}</span>
+                    <span class="gpu-spec-value">{{ gpu.core_clock if gpu.core_clock is defined else 'N/A' }} MHz</span>
                 </div>
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">内存频率:</span>
-                    <span class="gpu-spec-value">{{ gpu.memory_clock if gpu.memory_clock is defined else 'N/A' }}</span>
+                    <span class="gpu-spec-value">{{ gpu.memory_clock if gpu.memory_clock is defined else 'N/A' }} MHz</span>
                 </div>
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">总显存:</span>
@@ -1663,7 +1757,23 @@
             }, 100);
         });
 
-        // 添加更新内存信息的函数
+        // 添加网络速度监控
+        let lastRxBytes = 0;
+        let lastTxBytes = 0;
+        let lastNetworkTime = Date.now();
+
+        // 格式化网络速度
+        function formatNetworkSpeed(bytesPerSecond) {
+            if (bytesPerSecond < 1024) {
+                return `${bytesPerSecond.toFixed(1)} B/s`;
+            } else if (bytesPerSecond < 1024 * 1024) {
+                return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+            } else {
+                return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
+            }
+        }
+
+        // 扩展refreshData函数以更新内存频率、GPU频率和网速
         async function refreshData() {
             try {
                 const response = await fetch('/api/hardware_info');
@@ -1696,7 +1806,99 @@
                     }
                 }
                 
-                // ... 其他更新代码 ...
+                // 更新内存频率信息
+                if (data.memory) {
+                    if (data.memory.type) {
+                        document.getElementById('memory-type').textContent = data.memory.type;
+                    }
+                    if (data.memory.frequency) {
+                        document.getElementById('memory-frequency').textContent = `${data.memory.frequency} MHz`;
+                    }
+                    if (data.memory.channels) {
+                        document.getElementById('memory-channels').textContent = data.memory.channels;
+                    }
+                }
+                
+                // 更新GPU信息，包括更健壮的错误处理
+                if (data.gpu && Array.isArray(data.gpu) && data.gpu.length > 0) {
+                    const gpuCards = document.querySelectorAll('.gpu-card');
+                    data.gpu.forEach((gpu, index) => {
+                        if (index < gpuCards.length && gpu) {
+                            const card = gpuCards[index];
+                            
+                            // 更新GPU使用率
+                            const usageElement = card.querySelector('.gpu-usage-value');
+                            if (usageElement && typeof gpu.load !== 'undefined') {
+                                usageElement.textContent = `${Math.round(gpu.load)}%`;
+                                
+                                // 更新GPU使用率条
+                                const usageBar = card.querySelector('.gpu-usage-bar .progress-bar');
+                                if (usageBar) {
+                                    usageBar.style.width = `${Math.round(gpu.load)}%`;
+                                }
+                            }
+                            
+                            // 更健壮地更新GPU内存使用率
+                            const memUsageElement = card.querySelector('.gpu-memory-value');
+                            if (memUsageElement && gpu.memory && typeof gpu.memory.percent !== 'undefined') {
+                                memUsageElement.textContent = `${Math.round(gpu.memory.percent)}%`;
+                                
+                                // 更新GPU内存使用率条
+                                const memBar = card.querySelector('.gpu-memory-bar .progress-bar');
+                                if (memBar) {
+                                    memBar.style.width = `${Math.round(gpu.memory.percent)}%`;
+                                }
+                            } else if (memUsageElement) {
+                                // 如果没有内存信息，显示默认值
+                                memUsageElement.textContent = "N/A";
+                            }
+                            
+                            // 更新GPU温度
+                            const tempElement = card.querySelector('.gpu-temp-value');
+                            if (tempElement && typeof gpu.temperature !== 'undefined' && gpu.temperature !== null) {
+                                tempElement.textContent = `${Math.round(gpu.temperature)}°C`;
+                                
+                                // 更新温度指示器
+                                const tempIndicator = card.querySelector('.gpu-temp-indicator');
+                                if (tempIndicator) {
+                                    const temp = Math.round(gpu.temperature);
+                                    let color = '#00ff00'; // 默认绿色（低温）
+                                    
+                                    if (temp >= 80) {
+                                        color = '#ff0000'; // 红色（高温）
+                                    } else if (temp >= 70) {
+                                        color = '#ff9900'; // 橙色（中高温）
+                                    } else if (temp >= 60) {
+                                        color = '#ffff00'; // 黄色（中温）
+                                    }
+                                    
+                                    tempIndicator.style.backgroundColor = color;
+                                }
+                            } else if (tempElement) {
+                                // 如果没有温度信息，显示默认值
+                                tempElement.textContent = "N/A";
+                            }
+                        }
+                    });
+                }
+                
+                // 更新网络速度
+                if (data.network) {
+                    const now = Date.now();
+                    const timeElapsed = (now - lastNetworkTime) / 1000; // 秒数
+                    
+                    if (lastRxBytes > 0 && timeElapsed > 0) {
+                        const rxSpeed = (data.network.rx_bytes - lastRxBytes) / timeElapsed;
+                        const txSpeed = (data.network.tx_bytes - lastTxBytes) / timeElapsed;
+                        
+                        document.getElementById('download-speed').textContent = formatNetworkSpeed(rxSpeed);
+                        document.getElementById('upload-speed').textContent = formatNetworkSpeed(txSpeed);
+                    }
+                    
+                    lastRxBytes = data.network.rx_bytes;
+                    lastTxBytes = data.network.tx_bytes;
+                    lastNetworkTime = now;
+                }
                 
             } catch (error) {
                 console.error('获取数据失败:', error);

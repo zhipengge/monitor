@@ -109,8 +109,10 @@ def index():
         return f"发生错误: {str(e)}", 500
 
 @app.route('/api/hardware_info')
-def get_hardware_info():
-    return jsonify(hardware_info.get_all_info())
+def api_hardware_info():
+    """提供硬件信息API接口"""
+    hw_info = hardware_info.get_all_info()  # 重命名变量
+    return jsonify(hw_info)
 
 @app.route('/dashboard')
 def dashboard():

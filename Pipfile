@@ -10,6 +10,7 @@ py-cpuinfo = "*"
 GPUtil = "*"
 wmi = "*"
 py-sensors = "*"
+gputil = "*"
 
 [dev-packages]
 

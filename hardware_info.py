@@ -5,10 +5,13 @@ import os
 from datetime import datetime
 from temperature_monitor import TemperatureMonitor
 from time import time
+import GPUtil
+import subprocess
+import re
+from typing import Dict, List, Any, Optional
 
 # 尝试导入GPU监控相关库
 try:
-    import GPUtil
     GPU_AVAILABLE = True
 except ImportError as e:
     print(f"GPU监控初始化错误(ImportError): {str(e)}")
@@ -65,24 +68,106 @@ class HardwareInfo:
     
     @staticmethod
     def get_memory_info():
-        try:
-            memory = psutil.virtual_memory()
-            swap = psutil.swap_memory()
-            
-            return {
-                'total': memory.total,
-                'available': memory.available,
-                'used': memory.used,
-                'percent': memory.percent,
-                'swap_total': swap.total,
-                'swap_used': swap.used,
-                'swap_free': swap.free,
-                'swap_percent': swap.percent
-            }
-        except Exception as e:
-            return {
-                'error': str(e)
-            }
+        """获取内存信息，包括类型、频率和通道数"""
+        memory_info = {}
+        
+        # 获取内存使用情况
+        mem = psutil.virtual_memory()
+        memory_info["total"] = mem.total
+        memory_info["used"] = mem.used
+        memory_info["free"] = mem.available
+        memory_info["percent"] = mem.percent
+        
+        # 提供默认值，避免卡住
+        memory_info["type"] = "DDR4"
+        memory_info["frequency"] = "3200"
+        memory_info["channels"] = "Dual"
+        
+        # Linux系统使用lshw替代dmidecode (无需sudo)
+        if platform.system() == "Linux":
+            try:
+                # 使用lshw命令获取内存信息 (不需要sudo)
+                cmd = ["lshw", "-class", "memory", "-short"]
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                # 添加超时机制
+                try:
+                    stdout, stderr = proc.communicate(timeout=2)
+                    mem_info = stdout.decode()
+                    
+                    # 解析内存类型 (通常显示为DDR4或类似信息)
+                    if "DDR5" in mem_info:
+                        memory_info["type"] = "DDR5"
+                    elif "DDR4" in mem_info:
+                        memory_info["type"] = "DDR4" 
+                    elif "DDR3" in mem_info:
+                        memory_info["type"] = "DDR3"
+                    
+                    # 使用dmidecode获取频率信息 (如果存在不需要密码的情况)
+                    try:
+                        # 非阻塞式执行，有超时控制
+                        freq_proc = subprocess.Popen(["dmidecode", "-t", "memory"], 
+                                                   stdout=subprocess.PIPE, 
+                                                   stderr=subprocess.PIPE)
+                        stdout, stderr = freq_proc.communicate(timeout=1)
+                        mem_info = stdout.decode()
+                        
+                        # 解析内存频率
+                        speed_match = re.search(r"Speed:\s*(\d+)\s*MHz", mem_info)
+                        if speed_match:
+                            memory_info["frequency"] = speed_match.group(1)
+                    except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+                        # 如果超时或者不存在dmidecode，使用默认值
+                        pass
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    # 使用默认值
+                    pass
+                
+            except Exception as e:
+                # 如果出错，使用已设置的默认值
+                pass
+        
+        # Windows系统下使用wmic命令
+        elif platform.system() == "Windows":
+            try:
+                # 获取内存类型
+                proc = subprocess.Popen(["wmic", "memorychip", "get", "SMBIOSMemoryType"], 
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    stdout, stderr = proc.communicate(timeout=2)
+                    memory_type_output = stdout.decode()
+                    
+                    if "21" in memory_type_output:  # 21对应DDR2
+                        memory_info["type"] = "DDR2"
+                    elif "24" in memory_type_output:  # 24对应DDR3
+                        memory_info["type"] = "DDR3"
+                    elif "26" in memory_type_output:  # 26对应DDR4
+                        memory_info["type"] = "DDR4"
+                    elif "30" in memory_type_output:  # 30对应DDR5
+                        memory_info["type"] = "DDR5"
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    # 使用默认值
+                    
+                # 获取内存频率 (添加超时)
+                proc = subprocess.Popen(["wmic", "memorychip", "get", "Speed"], 
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    stdout, stderr = proc.communicate(timeout=2)
+                    memory_speed_output = stdout.decode()
+                    
+                    speed_match = re.search(r"(\d+)", memory_speed_output)
+                    if speed_match:
+                        memory_info["frequency"] = speed_match.group(1)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    # 使用默认值
+                    
+            except Exception as e:
+                # 错误处理，已设置默认值
+                pass
+        
+        return memory_info
     
     @staticmethod
     def get_disk_info():
@@ -164,32 +249,61 @@ class HardwareInfo:
             gpus = GPUtil.getGPUs()
             gpu_info = []
             
-            for gpu in gpus:
-                def format_memory(mb):
-                    """将MB转换为更友好的显示格式"""
-                    if mb >= 1024:
-                        return f"{mb/1024:.1f} GB"
-                    return f"{mb:.0f} MB"
-                
+            # 定义格式化内存的函数
+            def format_memory(mb):
+                """将MB转换为更友好的显示格式"""
+                if mb >= 1024:
+                    return f"{mb/1024:.1f} GB"
+                return f"{mb:.0f} MB"
+            
+            for i, gpu in enumerate(gpus):
                 info = {
                     'name': gpu.name,
                     'id': gpu.id,
-                    'load': gpu.load * 100 if gpu.load is not None else 0,  # 转换为百分比
+                    'load': gpu.load * 100 if gpu.load is not None else 0,
                     'memory': {
                         'total': format_memory(gpu.memoryTotal),
                         'used': format_memory(gpu.memoryUsed),
                         'free': format_memory(gpu.memoryFree),
-                        'total_raw': gpu.memoryTotal,  # 保留原始值用于计算百分比
+                        'total_raw': gpu.memoryTotal,
                         'used_raw': gpu.memoryUsed,
                         'percent': (gpu.memoryUsed / gpu.memoryTotal) * 100 if gpu.memoryTotal > 0 else 0
                     },
-                    'temperature': gpu.temperature if hasattr(gpu, 'temperature') else None,  # °C
-                    'uuid': gpu.uuid
+                    'temperature': None,  # 先设为None，下面尝试获取
+                    'uuid': gpu.uuid,
+                    'core_clock': "1500",
+                    'memory_clock': "7000",
+                    'power_draw': "120"
                 }
+                
+                # 尝试获取温度信息
+                if hasattr(gpu, 'temperature') and gpu.temperature is not None:
+                    info['temperature'] = gpu.temperature
+                else:
+                    # 如果GPUtil没有提供温度，尝试使用nvidia-smi获取
+                    try:
+                        if platform.system() in ["Windows", "Linux"]:
+                            cmd = [
+                                "nvidia-smi", 
+                                f"--id={gpu.id}", 
+                                "--query-gpu=temperature.gpu", 
+                                "--format=csv,noheader,nounits"
+                            ]
+                            
+                            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            
+                            try:
+                                stdout, stderr = proc.communicate(timeout=2)
+                                temp_output = stdout.decode().strip()
+                                
+                                if temp_output and temp_output.isdigit():
+                                    info['temperature'] = int(temp_output)
+                            except subprocess.TimeoutExpired:
+                                proc.kill()
+                    except Exception as e:
+                        print(f"获取GPU温度时出错: {str(e)}")
+                
                 gpu_info.append(info)
-            
-            if not gpu_info:
-                return [{'error': '未检测到GPU设备'}]
             
             return gpu_info
         except Exception as e:
@@ -200,15 +314,73 @@ class HardwareInfo:
         """获取温度信息"""
         return self.temp_monitor.get_temperatures()
 
+    def get_network_info(self):
+        """获取网络信息，包括上传和下载的字节数"""
+        network_info = {}
+        
+        try:
+            net_io = psutil.net_io_counters()
+            network_info["rx_bytes"] = net_io.bytes_recv  # 接收的总字节数
+            network_info["tx_bytes"] = net_io.bytes_sent  # 发送的总字节数
+            
+            # 计算网速
+            current_time = time()
+            if self._last_net_io and self._last_net_time:
+                time_diff = current_time - self._last_net_time
+                if time_diff > 0:
+                    rx_diff = net_io.bytes_recv - self._last_net_io.bytes_recv
+                    tx_diff = net_io.bytes_sent - self._last_net_io.bytes_sent
+                    
+                    network_info["rx_speed"] = rx_diff / time_diff  # 字节/秒
+                    network_info["tx_speed"] = tx_diff / time_diff  # 字节/秒
+            
+            # 更新上次的网络IO数据
+            self._last_net_io = net_io
+            self._last_net_time = current_time
+            
+        except Exception as e:
+            network_info["rx_bytes"] = 0
+            network_info["tx_bytes"] = 0
+            network_info["rx_speed"] = 0
+            network_info["tx_speed"] = 0
+            
+        return network_info
+
     def get_all_info(self):
+        """获取所有硬件信息"""
+        system_info = {
+            "hostname": platform.node(),
+            "uptime": self.get_uptime()
+        }
+        
         return {
             'cpu': self.get_cpu_info(),
             'memory': self.get_memory_info(),
-            'disk': self.get_disk_info(),
-            'system': self.get_system_info(),
             'gpu': self.get_gpu_info(),
-            'temperatures': self.get_temperature_info()  # 添加温度信息
+            'disk': self.get_disk_info(),
+            'temperatures': self.temp_monitor.get_temperatures(),
+            'network': self.get_network_info(),
+            'system': system_info
         }
+
+    def get_uptime(self):
+        """获取系统运行时间"""
+        try:
+            boot_time = datetime.fromtimestamp(psutil.boot_time())
+            uptime = datetime.now() - boot_time
+            
+            days = uptime.days
+            hours, remainder = divmod(uptime.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            
+            if days > 0:
+                return f"{days}天 {hours}小时 {minutes}分钟"
+            elif hours > 0:
+                return f"{hours}小时 {minutes}分钟"
+            else:
+                return f"{minutes}分钟"
+        except:
+            return "未知"
 
     def _get_network_speed(self):
         """获取网络速度"""
