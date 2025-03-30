@@ -108,7 +108,7 @@
                         </div>
                     `;
                     
-                    // CPU使用率
+                    // CPU使用率 (按核心排序)
                     cpuHtml += `
                         <div class="cpu-usage-card">
                             <div class="usage-header">
@@ -116,6 +116,18 @@
                                 <span class="usage-value">${data.cpu.total_usage.toFixed(1)}%</span>
                             </div>
                             ${createProgressBar(data.cpu.total_usage)}
+                            
+                            <div class="cpu-cores-grid">
+                                ${[...data.cpu.usage_per_core]
+                                    .sort((a, b) => b - a) // 降序排序
+                                    .map((usage, i) => `
+                                    <div class="core-item">
+                                        <div class="core-label">核心 ${i+1}</div>
+                                        <div class="core-value">${usage.toFixed(1)}%</div>
+                                        ${createProgressBar(usage)}
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
                     `;
                     
@@ -323,11 +335,29 @@
                             gpuHtml += `
                                 <div class="gpu-card">
                                     <h3>${gpu.name}</h3>
-                                    <div class="info-grid">
-                                        ${createInfoItem('GPU使用率', `${gpu.load.toFixed(1)}% ${createProgressBar(gpu.load)}`)}
-                                        ${gpu.temperature !== null ? createInfoItem('温度', `${gpu.temperature}°C ${createProgressBar(gpu.temperature, 100, 'temperature')}`) : ''}
-                                        ${createInfoItem('可用显存', gpu.memory.free)}
-                                        ${createInfoItem('显存使用率', `${gpu.memory.percent.toFixed(1)}% ${createProgressBar(gpu.memory.percent)}`)}
+                                    <div class="gpu-details-grid">
+                                        <div class="gpu-detail-card">
+                                            <div class="gpu-detail-header">
+                                                <i class="fas fa-tachometer-alt"></i>
+                                                <span>性能指标</span>
+                                            </div>
+                                            <div class="gpu-detail-content">
+                                                ${createInfoItem('GPU使用率', `${gpu.load.toFixed(1)}% ${createProgressBar(gpu.load)}`)}
+                                                ${gpu.temperature !== null ? createInfoItem('温度', `${gpu.temperature}°C ${createProgressBar(gpu.temperature, 100, 'temperature')}`) : ''}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="gpu-detail-card">
+                                            <div class="gpu-detail-header">
+                                                <i class="fas fa-memory"></i>
+                                                <span>显存信息</span>
+                                            </div>
+                                            <div class="gpu-detail-content">
+                                                ${createInfoItem('总显存', gpu.memory.total)}
+                                                ${createInfoItem('可用显存', gpu.memory.free)}
+                                                ${createInfoItem('显存使用率', `${gpu.memory.percent.toFixed(1)}% ${createProgressBar(gpu.memory.percent)}`)}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             `;
