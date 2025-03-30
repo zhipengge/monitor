@@ -24,24 +24,27 @@
         .cpu-chip-container {
             display: flex;
             justify-content: center;
-            margin: 20px 0;
-            perspective: 800px;
+            margin: 30px 0;
+            perspective: 1000px;
+            width: 100%;
         }
 
         .cpu-chip {
             position: relative;
-            width: 80%;
-            max-width: 800px;
-            aspect-ratio: 1 / 0.8;
+            width: 95%;
+            max-width: 1400px;
+            aspect-ratio: auto;
+            min-height: 400px;
             background: linear-gradient(135deg, #2a2a2a, #3a3a3a, #2a2a2a);
             border-radius: 10px;
-            padding: 40px;
+            padding: 60px 30px 30px;
             box-shadow:
                 0 10px 30px rgba(0, 0, 0, 0.5),
                 inset 0 0 15px rgba(0, 195, 255, 0.2);
             transform-style: preserve-3d;
-            transform: rotateX(10deg);
+            transform: rotateX(5deg);
             transition: transform 0.5s ease;
+            overflow: visible;
         }
 
         .cpu-chip:hover {
@@ -50,20 +53,20 @@
 
         .chip-label {
             position: absolute;
-            top: 10px;
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
             font-family: 'Courier New', monospace;
             text-shadow: 0 0 5px rgba(0, 195, 255, 0.7);
-            width: 90%;
+            width: 95%;
         }
 
         .cpu-name {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             color: #00c3ff;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .cpu-specs {
@@ -78,22 +81,28 @@
         .chip-cores {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            gap: 10px;
+            gap: 2px;
             width: 100%;
-            height: 100%;
+            padding: 25px 0 5px 0;
+            max-width: 100%;
+            margin-top: 10px;
         }
 
         .chip-core {
             position: relative;
             background: #1a1a1a;
             border: 1px solid rgba(0, 195, 255, 0.3);
-            border-radius: 6px;
-            padding: 15px 10px;
+            border-radius: 3px;
+            padding: 5px 2px 3px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             transition: all 0.3s ease;
+            min-height: 45px;
+            max-width: 90%;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
         .chip-core:hover {
@@ -103,33 +112,40 @@
 
         .core-id {
             position: absolute;
-            top: 5px;
-            left: 8px;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.7);
+            top: 1px;
+            left: 3px;
+            font-size: 0.55rem;
             font-weight: bold;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1;
         }
 
         .core-usage {
-            font-size: 1.4rem;
+            font-size: 0.85rem;
             font-weight: bold;
             color: #00c3ff;
-            text-shadow: 0 0 8px rgba(0, 195, 255, 0.5);
-            margin: 5px 0;
+            text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+            margin: 0;
+            padding-top: 8px;
+            text-align: center;
+            line-height: 1.1;
         }
 
         .core-temp {
-            font-size: 0.9rem;
-            padding: 5px 8px;
-            border-radius: 12px;
+            font-size: 0.65rem;
+            padding: 1px 2px;
+            border-radius: 3px;
             background-color: rgba(0, 0, 0, 0.5);
-            margin-top: 8px;
+            margin-top: 2px;
             text-align: center;
-            width: 70%;
-            position: relative;
+            width: 80%;
             font-weight: bold;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 2;
+            line-height: 1.1;
+        }
+
+        .core-temp::before {
+            content: none;
         }
 
         /* 温度颜色 */
@@ -153,7 +169,6 @@
         }
 
         @keyframes pulse {
-
             0%,
             100% {
                 opacity: 1;
@@ -244,55 +259,49 @@
         .memory-circle {
             width: 150px;
             height: 150px;
-            border-radius: 50%;
             margin: 20px auto;
-
-            background: conic-gradient(#20c997 0% {
-                        {
-                        mem_percent
-                    }
-                }
-
-                %,
-                #253850 {
-                        {
-                        mem_percent
-                    }
-                }
-
-                % 100%);
+            position: relative;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            background: conic-gradient(
+                #20c997 0% var(--memory-percent, 0%), 
+                #253850 var(--memory-percent, 0%) 100%
+            );
         }
 
         .memory-circle-inner {
             width: 120px;
             height: 120px;
-            border-radius: 50%;
             background: #1a2c42;
+            border-radius: 50%;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+
+        .memory-percent {
             font-size: 1.8rem;
             font-weight: bold;
             color: #20c997;
+            text-shadow: 0 0 10px rgba(32, 201, 151, 0.5);
         }
 
-        /* 隐藏可能的额外内存容器 */
-        .memory-container:not(.original) {
-            display: none !important;
+        .memory-label {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-top: 5px;
         }
 
         .memory-details {
-            margin-top: 20px;
-        }
-
-        .memory-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            font-size: 0.9rem;
+            color: #e9ecef;
+            margin-top: 5px;
         }
 
         /* 温度卡片 */
@@ -468,22 +477,28 @@
         .chip-cores {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            gap: 10px;
+            gap: 2px;
             width: 100%;
-            height: 100%;
+            padding: 25px 0 5px 0;
+            max-width: 100%;
+            margin-top: 10px;
         }
 
         .chip-core {
             position: relative;
             background: #1a1a1a;
             border: 1px solid rgba(0, 195, 255, 0.3);
-            border-radius: 6px;
-            padding: 15px 10px;
+            border-radius: 3px;
+            padding: 5px 2px 3px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             transition: all 0.3s ease;
+            min-height: 45px;
+            max-width: 90%;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
         .chip-core:hover {
@@ -493,33 +508,36 @@
 
         .core-id {
             position: absolute;
-            top: 5px;
-            left: 8px;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.7);
+            top: 1px;
+            left: 3px;
+            font-size: 0.55rem;
             font-weight: bold;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1;
         }
 
         .core-usage {
-            font-size: 1.4rem;
+            font-size: 0.85rem;
             font-weight: bold;
             color: #00c3ff;
-            text-shadow: 0 0 8px rgba(0, 195, 255, 0.5);
-            margin: 5px 0;
+            text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+            margin: 0;
+            padding-top: 8px;
+            text-align: center;
+            line-height: 1.1;
         }
 
         .core-temp {
-            font-size: 0.9rem;
-            padding: 5px 8px;
-            border-radius: 12px;
+            font-size: 0.65rem;
+            padding: 1px 2px;
+            border-radius: 3px;
             background-color: rgba(0, 0, 0, 0.5);
-            margin-top: 8px;
+            margin-top: 2px;
             text-align: center;
-            width: 70%;
-            position: relative;
+            width: 80%;
             font-weight: bold;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 2;
+            line-height: 1.1;
         }
 
         /* 温度颜色 */
@@ -543,7 +561,6 @@
         }
 
         @keyframes pulse {
-
             0%,
             100% {
                 opacity: 1;
@@ -637,14 +654,7 @@
 
         /* 动态温度指示器 */
         .core-temp::before {
-            content: '';
-            position: absolute;
-            left: 4px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
+            content: none;
         }
 
         .temp-high::before {
@@ -664,7 +674,6 @@
         }
 
         @keyframes blink {
-
             0%,
             100% {
                 opacity: 1;
@@ -1132,6 +1141,82 @@
             border: 1px solid rgba(0, 123, 255, 0.3);
             color: #aaa;
         }
+
+        /* 响应式调整 */
+        @media (max-width: 1400px) {
+            .chip-cores {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            }
+            
+            .core-usage {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .chip-cores {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+                gap: 8px;
+            }
+            
+            .chip-core {
+                min-height: 75px;
+                padding: 10px 5px 5px;
+            }
+            
+            .core-usage {
+                font-size: 1.1rem;
+            }
+            
+            .core-temp {
+                font-size: 0.75rem;
+                padding: 2px 4px;
+            }
+        }
+
+        /* 添加CPU平均使用率显示 */
+        .cpu-usage-average {
+            text-align: center; 
+            margin: 5px 0;
+            font-size: 0.95rem;
+            color: #e9ecef;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+            width: fit-content;
+            margin: 5px auto;
+            font-weight: bold;
+        }
+        
+        .cpu-usage-value {
+            color: #00c3ff;
+            text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+        }
+        
+        /* 系统信息和网速显示 */
+        .system-info-bar,
+        .system-info-item,
+        .network-speeds,
+        .network-speed,
+        .network-icon,
+        .upload-speed,
+        .download-speed {
+            display: none;
+        }
+        
+        /* 移除内存扩展信息样式 */
+        .memory-specs,
+        .memory-spec-item,
+        .memory-spec-value {
+            display: none;
+        }
+        
+        /* 移除GPU频率信息样式 */
+        .gpu-frequencies,
+        .gpu-freq-item,
+        .gpu-freq-value {
+            display: none;
+        }
     </style>
 </head>
 
@@ -1220,9 +1305,6 @@
                     {% endfor %}
                 </div>
             </div>
-            <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: #aaa;">
-                总使用率: {{ cpu_percent }}% | 运行于: {{ system.os if system else 'Unknown OS' }}
-            </div>
         </div>
         
     </div>
@@ -1231,40 +1313,18 @@
     <!-- 内存状态 -->
     <div class="monitor-card memory-card">
         <h2>内存状态</h2>
-        <div class="memory-circle">
-            <div class="memory-circle-inner">{{ mem_percent }}%</div>
+        <div class="memory-circle" style="--memory-percent: {{ memory.percent if memory and memory.percent is defined else 0 }}%">
+            <div class="memory-circle-inner">
+                <div class="memory-percent">{{ memory.percent if memory and memory.percent is defined else 0 }}%</div>
+                <div class="memory-label">已使用</div>
+            </div>
         </div>
         <div class="memory-details">
-            <div class="memory-item">
-                <span>总内存:</span>
-                <span>
-                    {% if mem_total is number %}
-                    {{ "%.2f"|format(mem_total/1024/1024/1024) }} GB
-                    {% else %}
-                    {{ "%.2f"|format(mem_total|float/1024/1024/1024) }} GB
-                    {% endif %}
-                </span>
-            </div>
-            <div class="memory-item">
-                <span>已用内存:</span>
-                <span>
-                    {% if mem_used is number %}
-                    {{ "%.2f"|format(mem_used/1024/1024/1024) }} GB
-                    {% else %}
-                    {{ "%.2f"|format(mem_used|float/1024/1024/1024) }} GB
-                    {% endif %}
-                </span>
-            </div>
-            <div class="memory-item">
-                <span>可用内存:</span>
-                <span>
-                    {% if mem_total is number and mem_used is number %}
-                    {{ "%.2f"|format((mem_total-mem_used)/1024/1024/1024) }} GB
-                    {% else %}
-                    {{ "%.2f"|format((mem_total|float-mem_used|float)/1024/1024/1024) }} GB
-                    {% endif %}
-                </span>
-            </div>
+            {% if memory and memory.used is defined and memory.total is defined %}
+                已用: {{ "%.1f"|format(memory.used/1073741824) }} GB / 总计: {{ "%.1f"|format(memory.total/1073741824) }} GB
+            {% else %}
+                内存信息不可用
+            {% endif %}
         </div>
     </div>
 
@@ -1284,7 +1344,7 @@
                 </div>
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">内存频率:</span>
-                    <span class="gpu-spec-value">{{ gpu.mem_clock if gpu.mem_clock is defined else 'N/A' }}</span>
+                    <span class="gpu-spec-value">{{ gpu.memory_clock if gpu.memory_clock is defined else 'N/A' }}</span>
                 </div>
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">总显存:</span>
@@ -1366,7 +1426,6 @@
                 <div class="gpu-fan"></div>
             </div>
         </div>
-
         {% endfor %}
     </div>
     {% else %}
@@ -1459,71 +1518,8 @@
             }
         }
 
-        // 定时获取最新数据
-        async function refreshData() {
-            try {
-                const response = await fetch('/api/hardware_info');
-                const data = await response.json();
-
-                // 更新CPU核心信息
-                if (data.cpu && data.cpu.usage_per_core) {
-                    data.cpu.usage_per_core.forEach((usage, i) => {
-                        const coreElement = document.querySelector(`.chip-core:nth-child(${i + 1})`);
-                        if (coreElement) {
-                            // 更新使用率
-                            const usageElement = coreElement.querySelector('.core-usage');
-                            if (usageElement) {
-                                usageElement.textContent = `${usage.toFixed(1)}%`;
-                            }
-
-                            // 添加动画效果表示更新
-                            coreElement.classList.add('updating');
-                            setTimeout(() => {
-                                coreElement.classList.remove('updating');
-                            }, 500);
-                        }
-                    });
-                }
-
-                // 更新CPU温度
-                if (data.temperatures) {
-                    let coreIndex = 0;
-                    for (const [key, sensor] of Object.entries(data.temperatures)) {
-                        if (key.toLowerCase().includes('core') && key.toLowerCase().includes('temp')) {
-                            const tempElement = document.querySelector(`.chip-core:nth-child(${coreIndex + 1}) .core-temp`);
-                            if (tempElement) {
-                                const tempValue = sensor.value;
-                                tempElement.textContent = `${tempValue}°C`;
-
-                                // 更新温度状态类
-                                tempElement.classList.remove('temp-high', 'temp-medium', 'temp-normal');
-                                if (tempValue > 70) {
-                                    tempElement.classList.add('temp-high');
-                                } else if (tempValue > 60) {
-                                    tempElement.classList.add('temp-medium');
-                                } else {
-                                    tempElement.classList.add('temp-normal');
-                                }
-
-                                // 添加闪烁动画效果
-                                tempElement.classList.add('temp-update');
-                                setTimeout(() => {
-                                    tempElement.classList.remove('temp-update');
-                                }, 800);
-                            }
-                            coreIndex++;
-                        }
-                    }
-                }
-
-            } catch (error) {
-                console.error('获取数据失败:', error);
-            }
-        }
-
         // 每秒更新时间，每5秒刷新数据
         setInterval(updateTime, 1000);
-        setInterval(refreshData, 5000);
         updateTime();
 
         // 初始化GPU风扇动画
@@ -1574,6 +1570,142 @@
                 }
             }
         });
+
+        // 精确计算CPU芯片容器尺寸
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取CPU核心数量
+            const coreCount = document.querySelectorAll('.chip-core').length;
+            const coresContainer = document.querySelector('.chip-cores');
+            const cpuChip = document.querySelector('.cpu-chip');
+            
+            if (!coresContainer || !cpuChip) return;
+            
+            // 根据核心数量调整核心尺寸
+            let coreHeight = 45; // 基础核心高度
+            
+            // 根据核心数量设置不同的核心高度
+            if (coreCount > 24) {
+                coreHeight = 40;
+                // 适应24核以上
+                document.querySelectorAll('.chip-core').forEach(core => {
+                    core.style.minHeight = '40px';
+                    
+                    const usageElem = core.querySelector('.core-usage');
+                    if (usageElem) {
+                        usageElem.style.fontSize = '0.8rem';
+                        usageElem.style.paddingTop = '6px';
+                    }
+                    
+                    const tempElem = core.querySelector('.core-temp');
+                    if (tempElem) {
+                        tempElem.style.fontSize = '0.6rem';
+                        tempElem.style.padding = '1px 2px';
+                        tempElem.style.marginTop = '1px';
+                    }
+                });
+            } else if (coreCount > 16) {
+                coreHeight = 42;
+                // 适应16-24个核心
+                document.querySelectorAll('.chip-core').forEach(core => {
+                    core.style.minHeight = '42px';
+                    
+                    const usageElem = core.querySelector('.core-usage');
+                    if (usageElem) {
+                        usageElem.style.fontSize = '0.82rem';
+                        usageElem.style.paddingTop = '7px';
+                    }
+                    
+                    const tempElem = core.querySelector('.core-temp');
+                    if (tempElem) {
+                        tempElem.style.fontSize = '0.62rem';
+                    }
+                });
+            }
+            
+            // 精确计算需要的行数
+            const rowCount = Math.ceil(coreCount / 8); // 保持8列
+            
+            // 精确计算芯片容器高度 - 减少额外空间
+            const rowGap = 2; // 行间距
+            const topPadding = 65; // 降低顶部内边距
+            const bottomPadding = 15; // 降低底部内边距
+            
+            // 精确计算需要的高度
+            const exactHeight = topPadding + (coreHeight * rowCount) + (rowGap * (rowCount - 1)) + bottomPadding;
+            
+            // 设置芯片高度 - 仅增加5%的额外空间确保不会过紧
+            cpuChip.style.minHeight = `${Math.ceil(exactHeight * 1.05)}px`;
+            
+            // 添加精确检测和调整
+            setTimeout(() => {
+                try {
+                    const chipRect = cpuChip.getBoundingClientRect();
+                    const coresRect = coresContainer.getBoundingClientRect();
+                    
+                    // 检查核心是否超出容器
+                    if (coresRect.bottom > chipRect.bottom - 10) {
+                        // 核心区域超出芯片区域，精确增加芯片高度
+                        const extraSpace = coresRect.bottom - chipRect.bottom + 15; // 仅增加必要的空间
+                        const currentHeight = parseFloat(cpuChip.style.minHeight) || exactHeight;
+                        cpuChip.style.minHeight = `${currentHeight + extraSpace}px`;
+                    }
+                    
+                    // 检查是否有过多空间
+                    if (chipRect.bottom > coresRect.bottom + 30) {
+                        // 芯片区域比核心区域大太多，缩小芯片高度
+                        const excessSpace = chipRect.bottom - coresRect.bottom - 20; // 保留20px的底部空间
+                        const currentHeight = parseFloat(cpuChip.style.minHeight) || exactHeight;
+                        cpuChip.style.minHeight = `${Math.max(exactHeight, currentHeight - excessSpace)}px`;
+                    }
+                } catch (e) {
+                    console.error("Error adjusting CPU chip size:", e);
+                }
+            }, 100);
+        });
+
+        // 添加更新内存信息的函数
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/hardware_info');
+                const data = await response.json();
+                
+                // 更新CPU核心信息
+                // ... 现有的CPU更新代码 ...
+                
+                // 更新内存信息
+                if (data.memory) {
+                    // 更新内存圆圈
+                    const memoryCircle = document.querySelector('.memory-circle');
+                    const memoryPercent = document.querySelector('.memory-percent');
+                    
+                    if (memoryCircle && data.memory.percent !== undefined) {
+                        memoryCircle.style.setProperty('--memory-percent', `${data.memory.percent}%`);
+                    }
+                    
+                    if (memoryPercent && data.memory.percent !== undefined) {
+                        memoryPercent.textContent = `${data.memory.percent}%`;
+                    }
+                    
+                    // 更新内存详情
+                    const memoryDetails = document.querySelector('.memory-details');
+                    if (memoryDetails && data.memory.used !== undefined && data.memory.total !== undefined) {
+                        // 转换为GB (字节 / 1073741824 = GB)
+                        const used = (data.memory.used / 1073741824).toFixed(1);
+                        const total = (data.memory.total / 1073741824).toFixed(1);
+                        memoryDetails.textContent = `已用: ${used} GB / 总计: ${total} GB`;
+                    }
+                }
+                
+                // ... 其他更新代码 ...
+                
+            } catch (error) {
+                console.error('获取数据失败:', error);
+            }
+        }
+
+        // 定时刷新数据
+        setInterval(refreshData, 5000);
+        refreshData(); // 立即执行一次
     </script>
 </body>
 
