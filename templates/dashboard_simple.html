@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>简化的硬件监控</title>
+</head>
+<body>
+    <h1>CPU信息</h1>
+    <p>CPU名称: {{ cpu_name }}</p>
+    <p>CPU核心数: {{ cpu_cores }}</p>
+    <p>总使用率: {{ cpu_percent }}%</p>
+    
+    <h2>CPU核心使用率</h2>
+    <ul>
+    {% for usage in cpu_usage_per_core %}
+        <li>核心{{ loop.index0 }}: {{ usage }}%</li>
+    {% endfor %}
+    </ul>
+    
+    <h2>CPU温度</h2>
+    <ul>
+    {% for temp in cpu_temps %}
+        <li>{{ temp.name }}: {{ temp.value }}°C</li>
+    {% endfor %}
+    </ul>
+</body>
+</html> 

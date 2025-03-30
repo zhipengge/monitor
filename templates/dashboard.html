@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>硬件监控仪表盘</title>
+    <style>
+        body { 
+            background-color: #0f1c2e; 
+            color: #e9ecef; 
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00c3ff;
+            text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+            margin-bottom: 30px;
+        }
+        
+        .cpu-chip-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            perspective: 800px;
+        }
+        
+        .cpu-chip {
+            position: relative;
+            width: 80%;
+            max-width: 800px;
+            aspect-ratio: 1 / 0.8;
+            background: linear-gradient(135deg, #2a2a2a, #3a3a3a, #2a2a2a);
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.5),
+                inset 0 0 15px rgba(0, 195, 255, 0.2);
+            transform-style: preserve-3d;
+            transform: rotateX(10deg);
+            transition: transform 0.5s ease;
+        }
+        
+        .cpu-chip:hover {
+            transform: rotateX(0deg);
+        }
+        
+        .chip-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 5px rgba(0, 195, 255, 0.7);
+            width: 90%;
+        }
+        
+        .cpu-name {
+            font-size: 1.2rem;
+            color: #00c3ff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .cpu-specs {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        
+        .chip-cores {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .chip-core {
+            position: relative;
+            background: #1a1a1a;
+            border: 1px solid rgba(0, 195, 255, 0.3);
+            border-radius: 6px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .chip-core:hover {
+            box-shadow: 0 0 15px rgba(0, 195, 255, 0.4);
+            transform: translateY(-3px);
+        }
+        
+        .core-id {
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: bold;
+        }
+        
+        .core-usage {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00c3ff;
+            text-shadow: 0 0 8px rgba(0, 195, 255, 0.5);
+            margin: 5px 0;
+        }
+        
+        .core-temp {
+            font-size: 0.9rem;
+            padding: 5px 8px;
+            border-radius: 12px;
+            background-color: rgba(0, 0, 0, 0.5);
+            margin-top: 8px;
+            text-align: center;
+            width: 70%;
+            position: relative;
+            font-weight: bold;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 2;
+        }
+        
+        /* 温度颜色 */
+        .temp-normal {
+            color: #7eff00;
+            box-shadow: 0 0 5px rgba(126, 255, 0, 0.4);
+            border-color: rgba(126, 255, 0, 0.2);
+        }
+        
+        .temp-medium {
+            color: #ffdd57;
+            box-shadow: 0 0 7px rgba(255, 221, 87, 0.5);
+            border-color: rgba(255, 221, 87, 0.3);
+        }
+        
+        .temp-high {
+            color: #ff3860;
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 10px rgba(255, 56, 96, 0.7);
+            border-color: rgba(255, 56, 96, 0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* 添加针脚效果 */
+        .cpu-pins {
+            position: absolute;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .cpu-pins-top, .cpu-pins-bottom {
+            bottom: -8px;
+            left: 10%;
+            right: 10%;
+        }
+        
+        .cpu-pins-top {
+            top: -8px;
+        }
+        
+        .cpu-pins-left, .cpu-pins-right {
+            top: 10%;
+            bottom: 10%;
+            flex-direction: column;
+        }
+        
+        .cpu-pins-left {
+            left: -8px;
+        }
+        
+        .cpu-pins-right {
+            right: -8px;
+        }
+        
+        .pin {
+            background-color: #888;
+            border-radius: 1px;
+        }
+        
+        .cpu-pins-top .pin, .cpu-pins-bottom .pin {
+            width: 4px;
+            height: 8px;
+        }
+        
+        .cpu-pins-left .pin, .cpu-pins-right .pin {
+            width: 8px;
+            height: 4px;
+        }
+
+        .monitors-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 40px;
+            justify-content: center;
+        }
+
+        .monitor-card {
+            background: #1a2c42;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .monitor-card h2 {
+            margin-top: 0;
+            color: #00c3ff;
+            font-size: 1.3rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        /* 内存卡片 */
+        .memory-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 20px auto;
+            background: conic-gradient(
+                #20c997 0% {{ mem_percent }}%,
+                #253850 {{ mem_percent }}% 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .memory-circle-inner {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #1a2c42;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #20c997;
+        }
+        
+        /* 隐藏可能的额外内存容器 */
+        .memory-container:not(.original) {
+            display: none !important;
+        }
+
+        .memory-details {
+            margin-top: 20px;
+        }
+
+        .memory-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 温度卡片 */
+        .temp-list {
+            margin-top: 20px;
+        }
+
+        .temp-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .temp-name {
+            font-size: 0.9rem;
+        }
+
+        .temp-value {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* 磁盘监控卡片 */
+        .disk-card {
+            background: #1a2c42;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .disk-list {
+            margin-top: 20px;
+        }
+
+        .disk-item {
+            margin-bottom: 15px;
+        }
+
+        .disk-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .disk-details {
+            font-size: 0.85rem;
+            color: #aaa;
+            text-align: right;
+            margin-top: 3px;
+        }
+
+        .progress {
+            height: 8px;
+            background-color: #253850;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #20c997, #00c3ff);
+        }
+
+        /* GPU监控卡片 */
+        .gpu-card {
+            background: #1a2c42;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .gpu-list {
+            margin-top: 20px;
+        }
+
+        .gpu-item {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gpu-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00c3ff;
+        }
+
+        .gpu-stat {
+            margin-bottom: 12px;
+        }
+
+        .gpu-progress {
+            margin: 5px 0;
+        }
+
+        .gpu-temp {
+            margin-top: 10px;
+        }
+
+        /* 系统信息样式 */
+        .system-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 30px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .system-time {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00c3ff;
+            margin-bottom: 10px;
+        }
+
+        .system-details {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .system-item {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .system-icon {
+            margin-right: 8px;
+        }
+
+        .updating {
+            position: relative;
+        }
+
+        .updating::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 195, 255, 0.2);
+            border-radius: 6px;
+            animation: fadeOut 0.5s ease forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* 修改CPU芯片部分，突出显示温度 */
+        .chip-cores {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .chip-core {
+            position: relative;
+            background: #1a1a1a;
+            border: 1px solid rgba(0, 195, 255, 0.3);
+            border-radius: 6px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .chip-core:hover {
+            box-shadow: 0 0 15px rgba(0, 195, 255, 0.4);
+            transform: translateY(-3px);
+        }
+        
+        .core-id {
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: bold;
+        }
+        
+        .core-usage {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00c3ff;
+            text-shadow: 0 0 8px rgba(0, 195, 255, 0.5);
+            margin: 5px 0;
+        }
+        
+        .core-temp {
+            font-size: 0.9rem;
+            padding: 5px 8px;
+            border-radius: 12px;
+            background-color: rgba(0, 0, 0, 0.5);
+            margin-top: 8px;
+            text-align: center;
+            width: 70%;
+            position: relative;
+            font-weight: bold;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 2;
+        }
+        
+        /* 温度颜色 */
+        .temp-normal {
+            color: #7eff00;
+            box-shadow: 0 0 5px rgba(126, 255, 0, 0.4);
+            border-color: rgba(126, 255, 0, 0.2);
+        }
+        
+        .temp-medium {
+            color: #ffdd57;
+            box-shadow: 0 0 7px rgba(255, 221, 87, 0.5);
+            border-color: rgba(255, 221, 87, 0.3);
+        }
+        
+        .temp-high {
+            color: #ff3860;
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 10px rgba(255, 56, 96, 0.7);
+            border-color: rgba(255, 56, 96, 0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* 添加针脚效果 */
+        .cpu-pins {
+            position: absolute;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .cpu-pins-top, .cpu-pins-bottom {
+            bottom: -8px;
+            left: 10%;
+            right: 10%;
+        }
+        
+        .cpu-pins-top {
+            top: -8px;
+        }
+        
+        .cpu-pins-left, .cpu-pins-right {
+            top: 10%;
+            bottom: 10%;
+            flex-direction: column;
+        }
+        
+        .cpu-pins-left {
+            left: -8px;
+        }
+        
+        .cpu-pins-right {
+            right: -8px;
+        }
+        
+        .pin {
+            background-color: #888;
+            border-radius: 1px;
+        }
+        
+        .cpu-pins-top .pin, .cpu-pins-bottom .pin {
+            width: 4px;
+            height: 8px;
+        }
+        
+        .cpu-pins-left .pin, .cpu-pins-right .pin {
+            width: 8px;
+            height: 4px;
+        }
+
+        .chip-core.core-high {
+            border-color: #ff3860;
+            box-shadow: 0 0 15px rgba(255, 56, 96, 0.4);
+        }
+
+        .chip-core.core-medium {
+            border-color: #ffdd57;
+            box-shadow: 0 0 15px rgba(255, 221, 87, 0.4);
+        }
+
+        .chip-core.core-low {
+            border-color: #7eff00;
+            box-shadow: 0 0 15px rgba(126, 255, 0, 0.4);
+        }
+
+        .core-circuit-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            opacity: 0.2;
+            background-image: 
+                linear-gradient(90deg, transparent 50%, rgba(0, 195, 255, 0.5) 50%),
+                linear-gradient(0deg, transparent 50%, rgba(0, 195, 255, 0.5) 50%);
+            background-size: 10px 10px;
+            border-radius: 5px;
+            z-index: 0;
+        }
+
+        /* 动态温度指示器 */
+        .core-temp::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .temp-high::before {
+            background-color: #ff3860;
+            box-shadow: 0 0 5px #ff3860;
+            animation: blink 0.8s infinite;
+        }
+
+        .temp-medium::before {
+            background-color: #ffdd57;
+            box-shadow: 0 0 3px #ffdd57;
+        }
+
+        .temp-normal::before {
+            background-color: #7eff00;
+            box-shadow: 0 0 3px #7eff00;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* 温度更新时的动画效果 */
+        .temp-update {
+            animation: temp-flash 0.8s ease;
+        }
+
+        @keyframes temp-flash {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* CPU额外信息区域样式 */
+        .cpu-extra-info {
+            grid-column: span 2;
+            grid-row: span 2;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border: 1px solid rgba(0, 195, 255, 0.3);
+        }
+        
+        .cpu-info-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .cpu-info-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+        }
+        
+        .cpu-info-value {
+            color: #00c3ff;
+            font-weight: bold;
+        }
+
+        /* 存储设备样式 - 硬盘形状 */
+        .storage-devices {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin: 40px 0;
+        }
+        
+        .disk-device {
+            position: relative;
+            width: 280px;
+            height: 180px;
+            background: linear-gradient(45deg, #202020, #303030);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(150, 150, 150, 0.2);
+        }
+        
+        .disk-top {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .disk-visual {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            margin-right: 15px;
+        }
+        
+        .disk-platter {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #555;
+            border-radius: 50%;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 3s linear;
+        }
+        
+        .disk-platter:after {
+            content: '';
+            width: 30%;
+            height: 30%;
+            background: #777;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .disk-platter:before {
+            content: '';
+            position: absolute;
+            width: 60%;
+            height: 60%;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+        
+        .disk-read-head {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            width: 20px;
+            height: 5px;
+            background: #999;
+            transform-origin: left center;
+            transform: translateX(-50%) rotate(45deg);
+        }
+        
+        .disk-info {
+            flex: 1;
+        }
+        
+        .disk-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #00c3ff;
+            margin-bottom: 5px;
+        }
+        
+        .disk-type {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+        
+        .disk-capacity {
+            font-weight: bold;
+        }
+        
+        .disk-usage {
+            margin-top: 15px;
+        }
+        
+        .progress-container {
+            height: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #20c997, #00c3ff);
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+        
+        .disk-detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        
+        .disk-detail-label {
+            color: #aaa;
+        }
+        
+        .disk-detail-value {
+            color: white;
+        }
+        
+        /* GPU卡片样式 */
+        .gpu-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            margin: 40px 0;
+        }
+        
+        .gpu-card {
+            position: relative;
+            width: 600px;
+            background: linear-gradient(to bottom, #202020, #303030);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(100, 100, 100, 0.3);
+        }
+        
+        .gpu-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+        
+        .gpu-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00c3ff;
+            text-shadow: 0 0 10px rgba(0, 195, 255, 0.4);
+        }
+        
+        .gpu-body {
+            display: flex;
+            height: 200px;
+        }
+        
+        .gpu-specs {
+            flex: 1;
+            padding-right: 20px;
+        }
+        
+        .gpu-spec-item {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .gpu-spec-label {
+            color: #aaa;
+        }
+        
+        .gpu-spec-value {
+            color: white;
+            font-weight: bold;
+        }
+        
+        .gpu-visual {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .gpu-gauge {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .gpu-gauge-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #1a1a1a;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5), inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .gpu-gauge-progress {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip: rect(0, 60px, 120px, 0);
+            overflow: hidden;
+        }
+        
+        .gpu-gauge-progress-fill {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #00c3ff, #20c997);
+            clip: rect(0, 60px, 120px, 0);
+            transform-origin: center;
+            transition: transform 0.5s ease;
+        }
+        
+        .gpu-gauge-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: #262626;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        .gpu-gauge-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #00c3ff;
+        }
+        
+        .gpu-gauge-label {
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .gpu-fan {
+            width: 60px;
+            height: 60px;
+            background-image: radial-gradient(circle, #333 20%, transparent 20%), 
+                              conic-gradient(from 0deg, 
+                                transparent 0deg, transparent 30deg, 
+                                #555 30deg, #555 60deg,
+                                transparent 60deg, transparent 90deg,
+                                #555 90deg, #555 120deg,
+                                transparent 120deg, transparent 150deg,
+                                #555 150deg, #555 180deg,
+                                transparent 180deg, transparent 210deg,
+                                #555 210deg, #555 240deg,
+                                transparent 240deg, transparent 270deg,
+                                #555 270deg, #555 300deg,
+                                transparent 300deg, transparent 330deg,
+                                #555 330deg, #555 360deg);
+            border-radius: 50%;
+            transition: transform 0.5s linear;
+        }
+    </style>
+</head>
+<body>
+    <h1>CPU芯片状态监控</h1>
+    
+    <div class="cpu-chip-container">
+        <div class="cpu-chip">
+            <div class="chip-label">
+                <div class="cpu-name">{{ cpu_name }}</div>
+                <div class="cpu-specs">
+                    {{ cpu_cores }}核心 | 平均使用率: {{ cpu_percent }}% | 
+                    {% set total_temp = 0 %}
+                    {% set count = 0 %}
+                    {% for temp in cpu_temps %}
+                        {% set total_temp = total_temp + temp.value %}
+                        {% set count = count + 1 %}
+                    {% endfor %}
+                    {% if count > 0 %}
+                        平均温度: {{ (total_temp / count)|round(1) }}°C
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="chip-cores">
+                {% for i in range(cpu_usage_per_core|length) %}
+                <div class="chip-core {% if cpu_usage_per_core[i] > 80 %}core-high{% elif cpu_usage_per_core[i] > 50 %}core-medium{% else %}core-low{% endif %}">
+                    <div class="core-id">Core{{ i }}</div>
+                    <div class="core-usage">{{ cpu_usage_per_core[i] }}%</div>
+                    
+                    <!-- 直接从cpu_temps数组获取温度 -->
+                    {% if i < cpu_temps|length %}
+                        <div class="core-temp {% if cpu_temps[i].value > 70 %}temp-high{% elif cpu_temps[i].value > 60 %}temp-medium{% else %}temp-normal{% endif %}">
+                            {{ cpu_temps[i].value }}°C
+                        </div>
+                    {% else %}
+                        <div class="core-temp temp-normal">N/A</div>
+                    {% endif %}
+                    
+                    <div class="core-circuit-lines"></div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 添加针脚 -->
+            <div class="cpu-pins cpu-pins-top">
+                {% for i in range(15) %}
+                <div class="pin"></div>
+                {% endfor %}
+            </div>
+            <div class="cpu-pins cpu-pins-right">
+                {% for i in range(10) %}
+                <div class="pin"></div>
+                {% endfor %}
+            </div>
+            <div class="cpu-pins cpu-pins-bottom">
+                {% for i in range(15) %}
+                <div class="pin"></div>
+                {% endfor %}
+            </div>
+            <div class="cpu-pins cpu-pins-left">
+                {% for i in range(10) %}
+                <div class="pin"></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: #aaa;">
+        总使用率: {{ cpu_percent }}% | 运行于: {{ system.os if system else 'Unknown OS' }}
+    </div>
+
+    <div class="system-info">
+        <div id="current-time" class="system-time"></div>
+        <div class="system-details">
+            <div class="system-item">
+                <i class="system-icon">💻</i>
+                <span>{{ system.os }}</span>
+            </div>
+            <div class="system-item">
+                <i class="system-icon">📋</i>
+                <span>{{ system.hostname }}</span>
+            </div>
+            <div class="system-item">
+                <i class="system-icon">⏱️</i>
+                <span>{{ system.uptime }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="monitors-container">
+        <!-- 内存状态 -->
+        <div class="monitor-card memory-card">
+            <h2>内存状态</h2>
+            <div class="memory-circle">
+                <div class="memory-circle-inner">{{ mem_percent }}%</div>
+            </div>
+            <div class="memory-details">
+                <div class="memory-item">
+                    <span>总内存:</span>
+                    <span>
+                        {% if mem_total is number %}
+                            {{ "%.2f"|format(mem_total/1024/1024/1024) }} GB
+                        {% else %}
+                            {{ "%.2f"|format(mem_total|float/1024/1024/1024) }} GB
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="memory-item">
+                    <span>已用内存:</span>
+                    <span>
+                        {% if mem_used is number %}
+                            {{ "%.2f"|format(mem_used/1024/1024/1024) }} GB
+                        {% else %}
+                            {{ "%.2f"|format(mem_used|float/1024/1024/1024) }} GB
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="memory-item">
+                    <span>可用内存:</span>
+                    <span>
+                        {% if mem_total is number and mem_used is number %}
+                            {{ "%.2f"|format((mem_total-mem_used)/1024/1024/1024) }} GB
+                        {% else %}
+                            {{ "%.2f"|format((mem_total|float-mem_used|float)/1024/1024/1024) }} GB
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- GPU卡片部分 -->
+        <h2 style="text-align: center; color: #00c3ff; margin-top: 40px;">显卡状态</h2>
+        <div class="gpu-cards">
+            {% if gpu_info and gpu_info|length > 0 %}
+                {% for gpu in gpu_info %}
+                <div class="gpu-card">
+                    <div class="gpu-header">
+                        <div class="gpu-name">{{ gpu.name if gpu.name is defined else '未知GPU' }}</div>
+                        <div>显卡驱动: {{ gpu.driver if gpu.driver is defined else 'Unknown' }}</div>
+                    </div>
+                    <div class="gpu-body">
+                        <div class="gpu-specs">
+                            <div class="gpu-spec-item">
+                                <span class="gpu-spec-label">核心频率:</span>
+                                <span class="gpu-spec-value">{{ gpu.core_clock if gpu.core_clock is defined else 'N/A' }}</span>
+                            </div>
+                            <div class="gpu-spec-item">
+                                <span class="gpu-spec-label">内存频率:</span>
+                                <span class="gpu-spec-value">{{ gpu.mem_clock if gpu.mem_clock is defined else 'N/A' }}</span>
+                            </div>
+                            <div class="gpu-spec-item">
+                                <span class="gpu-spec-label">总显存:</span>
+                                <span class="gpu-spec-value">{{ gpu.memory.total if gpu.memory.total is defined else 'N/A' }}</span>
+                            </div>
+                            <div class="gpu-spec-item">
+                                <span class="gpu-spec-label">可用显存:</span>
+                                <span class="gpu-spec-value">{{ gpu.memory.free if gpu.memory.free is defined else 'N/A' }}</span>
+                            </div>
+                            {% if gpu.temperature is defined %}
+                            <div class="gpu-spec-item">
+                                <span class="gpu-spec-label">GPU温度:</span>
+                                <span class="gpu-spec-value">{{ gpu.temperature }}°C</span>
+                            </div>
+                            {% endif %}
+                            {% if gpu.fan_speed is defined %}
+                            <div class="gpu-spec-item">
+                                <span class="gpu-spec-label">风扇转速:</span>
+                                <span class="gpu-spec-value">{{ gpu.fan_speed }}%</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="gpu-visual">
+                            <!-- GPU利用率圆环 -->
+                            <div class="gpu-gauge">
+                                <div class="gpu-gauge-circle"></div>
+                                {% set usage = gpu.load if gpu.load is defined else 0 %}
+                                
+                                <!-- 前半圆 -->
+                                <div class="gpu-gauge-progress">
+                                    <div class="gpu-gauge-progress-fill" style="transform: rotate({{ (usage/100 * 180)|round }}deg);"></div>
+                                </div>
+                                
+                                <!-- 后半圆 -->
+                                <div class="gpu-gauge-progress" style="transform: rotate(180deg);">
+                                    <div class="gpu-gauge-progress-fill" style="transform: rotate({{ (usage/100 * 180)|round if usage > 50 else 0 }}deg);"></div>
+                                </div>
+                                
+                                <div class="gpu-gauge-center">
+                                    <span class="gpu-gauge-value">{{ usage }}%</span>
+                                    <span class="gpu-gauge-label">GPU利用率</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 显存利用率圆环 -->
+                            <div class="gpu-gauge">
+                                <div class="gpu-gauge-circle"></div>
+                                {% set mem_usage = gpu.memory.percent if gpu.memory.percent is defined else 0 %}
+                                
+                                <!-- 前半圆 -->
+                                <div class="gpu-gauge-progress">
+                                    <div class="gpu-gauge-progress-fill" style="transform: rotate({{ (mem_usage/100 * 180)|round }}deg);"></div>
+                                </div>
+                                
+                                <!-- 后半圆 -->
+                                <div class="gpu-gauge-progress" style="transform: rotate(180deg);">
+                                    <div class="gpu-gauge-progress-fill" style="transform: rotate({{ (mem_usage/100 * 180)|round if mem_usage > 50 else 0 }}deg);"></div>
+                                </div>
+                                
+                                <div class="gpu-gauge-center">
+                                    <span class="gpu-gauge-value">{{ mem_usage }}%</span>
+                                    <span class="gpu-gauge-label">显存利用率</span>
+                                </div>
+                            </div>
+                            
+                            <!-- GPU风扇动画 -->
+                            <div class="gpu-fan"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 30px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; width: 400px;">
+                    <h3 style="margin-top: 0; color: #aaa;">未检测到显卡信息</h3>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 存储设备部分 -->
+        <h2 style="text-align: center; color: #00c3ff; margin-top: 40px;">存储设备</h2>
+        <div class="storage-devices">
+            {% set filtered_disks = [] %}
+            {% for disk in disks %}
+                {% if disk.total is defined and ((disk.total is number and disk.total/1024/1024/1024 > 50) or (disk.total is not number and disk.total|float/1024/1024/1024 > 50)) %}
+                    {% set _ = filtered_disks.append(disk) %}
+                {% endif %}
+            {% endfor %}
+            
+            {% if filtered_disks|length > 0 %}
+                {% for disk in filtered_disks|sort(attribute='total', reverse=true) %}
+                <div class="disk-device">
+                    <div class="disk-top">
+                        <div class="disk-visual">
+                            <div class="disk-platter"></div>
+                            <div class="disk-read-head"></div>
+                        </div>
+                        <div class="disk-info">
+                            <div class="disk-name">{{ disk.device if disk.device is defined else '未知设备' }}</div>
+                            <div class="disk-type">
+                                {% if disk.device is defined and 'sd' in disk.device %}
+                                    SATA 硬盘
+                                {% elif disk.device is defined and 'nvme' in disk.device %}
+                                    NVMe 固态硬盘
+                                {% else %}
+                                    存储设备
+                                {% endif %}
+                            </div>
+                            <div class="disk-capacity">
+                                {% if disk.total is defined %}
+                                    {% if disk.total is number %}
+                                        {{ "%.1f"|format(disk.total/1024/1024/1024) }} GB
+                                    {% else %}
+                                        {{ "%.1f"|format(disk.total|float/1024/1024/1024) }} GB
+                                    {% endif %}
+                                {% else %}
+                                    容量未知
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="disk-usage">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: {{ disk.percent if disk.percent is defined else 0 }}%"></div>
+                        </div>
+                        <div class="disk-detail-row">
+                            <span class="disk-detail-label">已用空间</span>
+                            <span class="disk-detail-value">
+                                {% if disk.used is defined and disk.total is defined %}
+                                    {% if disk.used is number and disk.total is number %}
+                                        {{ "%.1f"|format(disk.used/1024/1024/1024) }} GB / {{ "%.1f"|format(disk.total/1024/1024/1024) }} GB ({{ disk.percent if disk.percent is defined else 0 }}%)
+                                    {% else %}
+                                        {{ "%.1f"|format(disk.used|float/1024/1024/1024) }} GB / {{ "%.1f"|format(disk.total|float/1024/1024/1024) }} GB ({{ disk.percent if disk.percent is defined else 0 }}%)
+                                    {% endif %}
+                                {% else %}
+                                    数据不可用
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="disk-detail-row">
+                            <span class="disk-detail-label">可用空间</span>
+                            <span class="disk-detail-value">
+                                {% if disk.free is defined %}
+                                    {% if disk.free is number %}
+                                        {{ "%.1f"|format(disk.free/1024/1024/1024) }} GB
+                                    {% else %}
+                                        {{ "%.1f"|format(disk.free|float/1024/1024/1024) }} GB
+                                    {% endif %}
+                                {% else %}
+                                    数据不可用
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="disk-detail-row">
+                            <span class="disk-detail-label">文件系统</span>
+                            <span class="disk-detail-value">{{ disk.fstype if disk.fstype is defined else '未知' }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 30px; background: rgba(0, 0, 0, 0.3); border-radius: 10px;">
+                    <h3 style="margin-top: 0; color: #aaa;">无可用存储设备数据（>50GB）</h3>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 在CPU核心上添加鼠标悬停效果
+        document.querySelectorAll('.chip-core').forEach(core => {
+            core.addEventListener('mouseenter', () => {
+                core.style.transform = 'translateY(-5px) scale(1.05)';
+                core.style.boxShadow = '0 0 20px rgba(0, 195, 255, 0.6)';
+            });
+            
+            core.addEventListener('mouseleave', () => {
+                core.style.transform = '';
+                core.style.boxShadow = '';
+            });
+        });
+        
+        // 更新当前时间
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString();
+            
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = `${dateString} ${timeString}`;
+            }
+        }
+        
+        // 定时获取最新数据
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/hardware_info');
+                const data = await response.json();
+                
+                // 更新CPU核心信息
+                if (data.cpu && data.cpu.usage_per_core) {
+                    data.cpu.usage_per_core.forEach((usage, i) => {
+                        const coreElement = document.querySelector(`.chip-core:nth-child(${i+1})`);
+                        if (coreElement) {
+                            // 更新使用率
+                            const usageElement = coreElement.querySelector('.core-usage');
+                            if (usageElement) {
+                                usageElement.textContent = `${usage.toFixed(1)}%`;
+                            }
+                            
+                            // 添加动画效果表示更新
+                            coreElement.classList.add('updating');
+                            setTimeout(() => {
+                                coreElement.classList.remove('updating');
+                            }, 500);
+                        }
+                    });
+                }
+                
+                // 更新CPU温度
+                if (data.temperatures) {
+                    let coreIndex = 0;
+                    for (const [key, sensor] of Object.entries(data.temperatures)) {
+                        if (key.toLowerCase().includes('core') && key.toLowerCase().includes('temp')) {
+                            const tempElement = document.querySelector(`.chip-core:nth-child(${coreIndex+1}) .core-temp`);
+                            if (tempElement) {
+                                const tempValue = sensor.value;
+                                tempElement.textContent = `${tempValue}°C`;
+                                
+                                // 更新温度状态类
+                                tempElement.classList.remove('temp-high', 'temp-medium', 'temp-normal');
+                                if (tempValue > 70) {
+                                    tempElement.classList.add('temp-high');
+                                } else if (tempValue > 60) {
+                                    tempElement.classList.add('temp-medium');
+                                } else {
+                                    tempElement.classList.add('temp-normal');
+                                }
+                                
+                                // 添加闪烁动画效果
+                                tempElement.classList.add('temp-update');
+                                setTimeout(() => {
+                                    tempElement.classList.remove('temp-update');
+                                }, 800);
+                            }
+                            coreIndex++;
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('获取数据失败:', error);
+            }
+        }
+        
+        // 每秒更新时间，每5秒刷新数据
+        setInterval(updateTime, 1000);
+        setInterval(refreshData, 5000);
+        updateTime();
+        
+        // 初始化GPU风扇动画
+        document.querySelectorAll('.gpu-fan').forEach(fan => {
+            setInterval(() => {
+                fan.style.transform = `rotate(${Math.floor(Date.now() / 10) % 360}deg)`;
+            }, 16); // 约60fps的更新率
+        });
+        
+        // 初始化硬盘旋转动画
+        document.querySelectorAll('.disk-platter').forEach(platter => {
+            setInterval(() => {
+                platter.style.transform = `rotate(${Math.floor(Date.now() / 30) % 360}deg)`;
+            }, 16);
+        });
+        
+        // 添加磁盘悬停效果
+        document.querySelectorAll('.disk-device').forEach(disk => {
+            disk.addEventListener('mouseenter', () => {
+                disk.style.transform = 'translateY(-5px)';
+                disk.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.4)';
+            });
+            
+            disk.addEventListener('mouseleave', () => {
+                disk.style.transform = '';
+                disk.style.boxShadow = '';
+            });
+        });
+    </script>
+</body>
+</html> 
