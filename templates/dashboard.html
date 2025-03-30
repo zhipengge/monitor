@@ -1351,7 +1351,7 @@
 
                             <!-- 直接从cpu_temps数组获取温度 -->
                             {% if i < cpu_temps|length %} <div
-                                class="core-temp {% if cpu_temps[i].value > 70 %}temp-high{% elif cpu_temps[i].value > 60 %}temp-medium{% else %}temp-normal{% endif %}">
+                                class="core-temp {% if cpu_temps[i].value > 70 %}temp-medium{% elif cpu_temps[i].value > 60 %}temp-normal{% else %}temp-normal{% endif %}">
                                 {{ cpu_temps[i].value }}°C
                         </div>
                         {% else %}
@@ -1422,24 +1422,13 @@
         </div>
     </div>
 
-    <!-- 将GPU信息整合到monitor-card中 -->
-    {% if gpu_info and gpu_info|length > 0 %}
-    <div class="monitor-card gpu-card">
-        <h2>显卡状态</h2>
-        {% for gpu in gpu_info %}
-
+    <!-- 恢复GPU卡片与圆环显示 -->
+    {% for gpu in gpu_info %}
+    <div class="gpu-card">
         <h2>{{ gpu.name if gpu.name is defined else '未知GPU' }}</h2>
         <div class="gpu-body">
             <!-- GPU规格信息 -->
             <div class="gpu-specs">
-                <div class="gpu-spec-item">
-                    <span class="gpu-spec-label">核心频率:</span>
-                    <span class="gpu-spec-value">{{ gpu.core_clock if gpu.core_clock is defined else 'N/A' }} MHz</span>
-                </div>
-                <div class="gpu-spec-item">
-                    <span class="gpu-spec-label">内存频率:</span>
-                    <span class="gpu-spec-value">{{ gpu.memory_clock if gpu.memory_clock is defined else 'N/A' }} MHz</span>
-                </div>
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">总显存:</span>
                     <span class="gpu-spec-value">{{ gpu.memory.total if gpu.memory.total is defined else 'N/A' }}</span>
@@ -1451,18 +1440,13 @@
                 {% if gpu.temperature is defined %}
                 <div class="gpu-spec-item">
                     <span class="gpu-spec-label">GPU温度:</span>
-                    <span class="gpu-spec-value 
+                    <span class="gpu-spec-value gpu-temp-value
                             {% if gpu.temperature > 80 %}temp-high{% 
                             elif gpu.temperature > 70 %}temp-medium{% 
                             else %}temp-normal{% endif %}">
                         {{ gpu.temperature }}°C
                     </span>
-                </div>
-                {% endif %}
-                {% if gpu.fan_speed is defined %}
-                <div class="gpu-spec-item">
-                    <span class="gpu-spec-label">风扇转速:</span>
-                    <span class="gpu-spec-value">{{ gpu.fan_speed }}%</span>
+                    <span class="gpu-temp-indicator"></span>
                 </div>
                 {% endif %}
             </div>
@@ -1487,11 +1471,11 @@
                     </div>
 
                     <div class="gpu-gauge-center">
-                        <span class="gpu-gauge-value">{{ usage }}%</span>
+                        <span class="gpu-gauge-value">{{ usage|round|int }}%</span>
                         <span class="gpu-gauge-label">GPU利用率</span>
                     </div>
                 </div>
-
+                
                 <!-- 显存利用率圆环 -->
                 <div class="gpu-gauge">
                     <div class="gpu-gauge-circle"></div>
@@ -1511,23 +1495,14 @@
                     </div>
 
                     <div class="gpu-gauge-center">
-                        <span class="gpu-gauge-value">{{ mem_usage }}%</span>
+                        <span class="gpu-gauge-value">{{ mem_usage|round|int }}%</span>
                         <span class="gpu-gauge-label">显存利用率</span>
                     </div>
                 </div>
-
-                <!-- GPU风扇动画 -->
-                <div class="gpu-fan"></div>
             </div>
         </div>
-        {% endfor %}
     </div>
-    {% else %}
-    <div class="monitor-card">
-        <h2>显卡信息</h2>
-        <div class="alert alert-info">未检测到显卡信息</div>
-    </div>
-    {% endif %}
+    {% endfor %}
 
     <!-- 存储设备卡片 -->
     <div class="monitor-card storage-card">
@@ -1773,7 +1748,7 @@
             }
         }
 
-        // 扩展refreshData函数以更新内存频率、GPU频率和网速
+        // 更新GPU圆环显示的函数
         async function refreshData() {
             try {
                 const response = await fetch('/api/hardware_info');
@@ -1819,41 +1794,55 @@
                     }
                 }
                 
-                // 更新GPU信息，包括更健壮的错误处理
+                // 更新GPU信息，使用圆环显示
                 if (data.gpu && Array.isArray(data.gpu) && data.gpu.length > 0) {
                     const gpuCards = document.querySelectorAll('.gpu-card');
+                    
                     data.gpu.forEach((gpu, index) => {
                         if (index < gpuCards.length && gpu) {
                             const card = gpuCards[index];
                             
-                            // 更新GPU使用率
-                            const usageElement = card.querySelector('.gpu-usage-value');
-                            if (usageElement && typeof gpu.load !== 'undefined') {
-                                usageElement.textContent = `${Math.round(gpu.load)}%`;
+                            // 更新GPU利用率圆环
+                            const usage = Math.round(gpu.load || 0);
+                            const gpuGaugeValue = card.querySelector('.gpu-gauge:first-child .gpu-gauge-value');
+                            if (gpuGaugeValue) {
+                                gpuGaugeValue.textContent = `${usage}%`;
+                            }
+                            
+                            // 更新前半圆
+                            const frontHalfFill = card.querySelector('.gpu-gauge:first-child .gpu-gauge-progress:first-child .gpu-gauge-progress-fill');
+                            if (frontHalfFill) {
+                                frontHalfFill.style.transform = `rotate(${Math.min(180, usage / 100 * 180)}deg)`;
+                            }
+                            
+                            // 更新后半圆
+                            const backHalfFill = card.querySelector('.gpu-gauge:first-child .gpu-gauge-progress:nth-child(2) .gpu-gauge-progress-fill');
+                            if (backHalfFill) {
+                                backHalfFill.style.transform = `rotate(${usage > 50 ? (usage - 50) / 50 * 180 : 0}deg)`;
+                            }
+                            
+                            // 更新显存利用率圆环
+                            if (gpu.memory && typeof gpu.memory.percent !== 'undefined') {
+                                const memUsage = Math.round(gpu.memory.percent);
+                                const memGaugeValue = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-value');
+                                if (memGaugeValue) {
+                                    memGaugeValue.textContent = `${memUsage}%`;
+                                }
                                 
-                                // 更新GPU使用率条
-                                const usageBar = card.querySelector('.gpu-usage-bar .progress-bar');
-                                if (usageBar) {
-                                    usageBar.style.width = `${Math.round(gpu.load)}%`;
+                                // 更新前半圆
+                                const memFrontHalfFill = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-progress:first-child .gpu-gauge-progress-fill');
+                                if (memFrontHalfFill) {
+                                    memFrontHalfFill.style.transform = `rotate(${Math.min(180, memUsage / 100 * 180)}deg)`;
+                                }
+                                
+                                // 更新后半圆
+                                const memBackHalfFill = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-progress:nth-child(2) .gpu-gauge-progress-fill');
+                                if (memBackHalfFill) {
+                                    memBackHalfFill.style.transform = `rotate(${memUsage > 50 ? (memUsage - 50) / 50 * 180 : 0}deg)`;
                                 }
                             }
                             
-                            // 更健壮地更新GPU内存使用率
-                            const memUsageElement = card.querySelector('.gpu-memory-value');
-                            if (memUsageElement && gpu.memory && typeof gpu.memory.percent !== 'undefined') {
-                                memUsageElement.textContent = `${Math.round(gpu.memory.percent)}%`;
-                                
-                                // 更新GPU内存使用率条
-                                const memBar = card.querySelector('.gpu-memory-bar .progress-bar');
-                                if (memBar) {
-                                    memBar.style.width = `${Math.round(gpu.memory.percent)}%`;
-                                }
-                            } else if (memUsageElement) {
-                                // 如果没有内存信息，显示默认值
-                                memUsageElement.textContent = "N/A";
-                            }
-                            
-                            // 更新GPU温度
+                            // 更新温度
                             const tempElement = card.querySelector('.gpu-temp-value');
                             if (tempElement && typeof gpu.temperature !== 'undefined' && gpu.temperature !== null) {
                                 tempElement.textContent = `${Math.round(gpu.temperature)}°C`;
@@ -1862,24 +1851,33 @@
                                 const tempIndicator = card.querySelector('.gpu-temp-indicator');
                                 if (tempIndicator) {
                                     const temp = Math.round(gpu.temperature);
-                                    let color = '#00ff00'; // 默认绿色（低温）
+                                    let color = '#00ff00';
                                     
-                                    if (temp >= 80) {
-                                        color = '#ff0000'; // 红色（高温）
-                                    } else if (temp >= 70) {
-                                        color = '#ff9900'; // 橙色（中高温）
-                                    } else if (temp >= 60) {
-                                        color = '#ffff00'; // 黄色（中温）
-                                    }
+                                    if (temp >= 80) color = '#ff0000';
+                                    else if (temp >= 70) color = '#ff9900';
+                                    else if (temp >= 60) color = '#ffff00';
                                     
                                     tempIndicator.style.backgroundColor = color;
+                                    
+                                    // 更新温度类名
+                                    tempElement.classList.remove('temp-high', 'temp-medium', 'temp-normal');
+                                    if (temp >= 80) tempElement.classList.add('temp-high');
+                                    else if (temp >= 70) tempElement.classList.add('temp-medium');
+                                    else tempElement.classList.add('temp-normal');
                                 }
-                            } else if (tempElement) {
-                                // 如果没有温度信息，显示默认值
-                                tempElement.textContent = "N/A";
                             }
+                            
+                            // 记录到控制台以帮助调试
+                            console.log(`GPU ${index} 数据:`, {
+                                name: gpu.name,
+                                load: gpu.load,
+                                memPercent: gpu.memory?.percent,
+                                temp: gpu.temperature
+                            });
                         }
                     });
+                } else {
+                    console.log('未检测到GPU数据或数据格式不正确:', data.gpu);
                 }
                 
                 // 更新网络速度
@@ -1901,7 +1899,7 @@
                 }
                 
             } catch (error) {
-                console.error('获取数据失败:', error);
+                console.error('获取GPU数据失败:', error);
             }
         }
 

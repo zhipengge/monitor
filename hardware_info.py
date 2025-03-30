@@ -249,7 +249,6 @@ class HardwareInfo:
             gpus = GPUtil.getGPUs()
             gpu_info = []
             
-            # 定义格式化内存的函数
             def format_memory(mb):
                 """将MB转换为更友好的显示格式"""
                 if mb >= 1024:
@@ -257,53 +256,82 @@ class HardwareInfo:
                 return f"{mb:.0f} MB"
             
             for i, gpu in enumerate(gpus):
-                info = {
-                    'name': gpu.name,
-                    'id': gpu.id,
-                    'load': gpu.load * 100 if gpu.load is not None else 0,
-                    'memory': {
-                        'total': format_memory(gpu.memoryTotal),
-                        'used': format_memory(gpu.memoryUsed),
-                        'free': format_memory(gpu.memoryFree),
-                        'total_raw': gpu.memoryTotal,
-                        'used_raw': gpu.memoryUsed,
-                        'percent': (gpu.memoryUsed / gpu.memoryTotal) * 100 if gpu.memoryTotal > 0 else 0
-                    },
-                    'temperature': None,  # 先设为None，下面尝试获取
-                    'uuid': gpu.uuid,
-                    'core_clock': "1500",
-                    'memory_clock': "7000",
-                    'power_draw': "120"
-                }
-                
-                # 尝试获取温度信息
-                if hasattr(gpu, 'temperature') and gpu.temperature is not None:
-                    info['temperature'] = gpu.temperature
-                else:
-                    # 如果GPUtil没有提供温度，尝试使用nvidia-smi获取
-                    try:
-                        if platform.system() in ["Windows", "Linux"]:
+                try:
+                    # 确保load值有效，否则通过nvidia-smi获取
+                    load = gpu.load
+                    if load is None or load < 0:
+                        load = 0
+                        # 尝试通过nvidia-smi获取GPU利用率
+                        try:
+                            cmd = [
+                                "nvidia-smi", 
+                                f"--id={gpu.id}", 
+                                "--query-gpu=utilization.gpu", 
+                                "--format=csv,noheader,nounits"
+                            ]
+                            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            stdout, stderr = proc.communicate(timeout=2)
+                            util_output = stdout.decode().strip()
+                            if util_output and util_output.replace('.', '', 1).isdigit():
+                                load = float(util_output) / 100.0
+                        except:
+                            pass
+                    
+                    # 构建GPU信息
+                    info = {
+                        'name': gpu.name,
+                        'id': gpu.id,
+                        'load': load * 100,  # 转换为百分比
+                        'memory': {
+                            'total': format_memory(gpu.memoryTotal),
+                            'used': format_memory(gpu.memoryUsed),
+                            'free': format_memory(gpu.memoryFree),
+                            'total_raw': gpu.memoryTotal,
+                            'used_raw': gpu.memoryUsed,
+                            'percent': (gpu.memoryUsed / gpu.memoryTotal) * 100 if gpu.memoryTotal > 0 else 0
+                        },
+                        'temperature': None,
+                        'uuid': gpu.uuid,
+                        'core_clock': "1500",
+                        'memory_clock': "7000",
+                        'power_draw': "120"
+                    }
+                    
+                    # 记录调试信息
+                    print(f"GPU {i} 信息: 负载={info['load']}%, 内存使用率={info['memory']['percent']}%")
+                    
+                    # 获取温度信息
+                    if hasattr(gpu, 'temperature') and gpu.temperature is not None:
+                        info['temperature'] = gpu.temperature
+                    else:
+                        # 使用nvidia-smi获取温度
+                        try:
                             cmd = [
                                 "nvidia-smi", 
                                 f"--id={gpu.id}", 
                                 "--query-gpu=temperature.gpu", 
                                 "--format=csv,noheader,nounits"
                             ]
-                            
                             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                            
-                            try:
-                                stdout, stderr = proc.communicate(timeout=2)
-                                temp_output = stdout.decode().strip()
-                                
-                                if temp_output and temp_output.isdigit():
-                                    info['temperature'] = int(temp_output)
-                            except subprocess.TimeoutExpired:
-                                proc.kill()
-                    except Exception as e:
-                        print(f"获取GPU温度时出错: {str(e)}")
-                
-                gpu_info.append(info)
+                            stdout, stderr = proc.communicate(timeout=2)
+                            temp_output = stdout.decode().strip()
+                            if temp_output and temp_output.isdigit():
+                                info['temperature'] = int(temp_output)
+                        except:
+                            pass
+                    
+                    gpu_info.append(info)
+                except Exception as e:
+                    print(f"处理GPU {i} 信息时出错: {str(e)}")
+                    # 添加具有默认值的GPU以保持索引一致性
+                    gpu_info.append({
+                        'name': gpu.name if hasattr(gpu, 'name') else f"GPU {i}",
+                        'id': i,
+                        'load': 0,
+                        'memory': {'percent': 0, 'total': '0 GB', 'used': '0 GB'},
+                        'temperature': None,
+                        'error': str(e)
+                    })
             
             return gpu_info
         except Exception as e:
