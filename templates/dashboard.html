@@ -937,6 +937,10 @@
             position: relative;
             width: 120px;
             height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .gpu-gauge-circle {
@@ -944,50 +948,47 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
+            background: conic-gradient(
+                from -90deg,
+                #00c3ff 0deg,
+                #20c997 var(--gpu-percent, 0deg),
+                #253850 var(--gpu-percent, 0deg),
+                #253850 360deg
+            );
+            padding: 8px;
+            box-sizing: border-box;
+            transition: background 0.5s ease;
+        }
+
+        .gpu-gauge-circle::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: calc(100% - 16px);
+            height: calc(100% - 16px);
+            border-radius: 50%;
             background: #1a1a1a;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5), inset 0 0 5px rgba(0, 0, 0, 0.5);
-        }
-
-        .gpu-gauge-progress {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            clip: rect(0, 60px, 120px, 0);
-            overflow: hidden;
-        }
-
-        .gpu-gauge-progress-fill {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, #00c3ff, #20c997);
-            clip: rect(0, 60px, 120px, 0);
-            transform-origin: center;
-            transition: transform 0.5s ease;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
         }
 
         .gpu-gauge-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 80px;
-            background: #262626;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
         }
 
         .gpu-gauge-value {
             font-size: 1.3rem;
             font-weight: bold;
             color: #00c3ff;
+            text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
         }
 
         .gpu-gauge-label {
@@ -1246,6 +1247,20 @@
             padding: 10px;
         }
         
+        /* GPU温度曲线图表样式 */
+        .gpu-temp-chart-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gpu-temp-chart {
+            width: 100%;
+            height: 200px;
+        }
+        
         .gpu-spec-detail {
             display: flex;
             justify-content: space-between;
@@ -1455,50 +1470,35 @@
             <div class="gpu-visual">
                 <!-- GPU利用率圆环 -->
                 <div class="gpu-gauge">
-                    <div class="gpu-gauge-circle"></div>
-                    {% set usage = gpu.load if gpu.load is defined else 0 %}
-
-                    <!-- 前半圆 -->
-                    <div class="gpu-gauge-progress">
-                        <div class="gpu-gauge-progress-fill"
-                            style="transform: rotate({{ (usage/100 * 180)|round }}deg);"></div>
-                    </div>
-
-                    <!-- 后半圆 -->
-                    <div class="gpu-gauge-progress" style="transform: rotate(180deg);">
-                        <div class="gpu-gauge-progress-fill"
-                            style="transform: rotate({{ (usage/100 * 180)|round if usage > 50 else 0 }}deg);"></div>
-                    </div>
-
+                    {% set usage_raw = gpu.load if gpu.load is defined else 0 %}
+                    {% set usage = (usage_raw|round)|int %}
+                    {% set usage_clamped = usage if usage >= 0 and usage <= 100 else (0 if usage < 0 else 100) %}
+                    {% set usage_angle = (usage_clamped / 100 * 360) %}
+                    <div class="gpu-gauge-circle" style="--gpu-percent: {{ usage_angle }}deg;"></div>
                     <div class="gpu-gauge-center">
-                        <span class="gpu-gauge-value">{{ usage|round|int }}%</span>
+                        <span class="gpu-gauge-value">{{ usage_clamped }}%</span>
                         <span class="gpu-gauge-label">GPU利用率</span>
                     </div>
                 </div>
                 
                 <!-- 显存利用率圆环 -->
                 <div class="gpu-gauge">
-                    <div class="gpu-gauge-circle"></div>
-                    {% set mem_usage = gpu.memory.percent if gpu.memory.percent is defined else 0 %}
-
-                    <!-- 前半圆 -->
-                    <div class="gpu-gauge-progress">
-                        <div class="gpu-gauge-progress-fill"
-                            style="transform: rotate({{ (mem_usage/100 * 180)|round }}deg);"></div>
-                    </div>
-
-                    <!-- 后半圆 -->
-                    <div class="gpu-gauge-progress" style="transform: rotate(180deg);">
-                        <div class="gpu-gauge-progress-fill"
-                            style="transform: rotate({{ (mem_usage/100 * 180)|round if mem_usage > 50 else 0 }}deg);">
-                        </div>
-                    </div>
-
+                    {% set mem_usage_raw = gpu.memory.percent if gpu.memory.percent is defined else 0 %}
+                    {% set mem_usage = (mem_usage_raw|round)|int %}
+                    {% set mem_usage_clamped = mem_usage if mem_usage >= 0 and mem_usage <= 100 else (0 if mem_usage < 0 else 100) %}
+                    {% set mem_usage_angle = (mem_usage_clamped / 100 * 360) %}
+                    <div class="gpu-gauge-circle" style="--gpu-percent: {{ mem_usage_angle }}deg;"></div>
                     <div class="gpu-gauge-center">
-                        <span class="gpu-gauge-value">{{ mem_usage|round|int }}%</span>
+                        <span class="gpu-gauge-value">{{ mem_usage_clamped }}%</span>
                         <span class="gpu-gauge-label">显存利用率</span>
                     </div>
                 </div>
+            </div>
+            
+            <!-- GPU温度曲线图表 -->
+            <div class="gpu-temp-chart-container">
+                <h3 style="color: #00c3ff; margin-bottom: 10px; text-align: center;">GPU温度曲线</h3>
+                <canvas id="gpu-temp-chart-{{ loop.index0 }}" class="gpu-temp-chart" data-gpu-index="{{ loop.index0 }}" style="max-height: 200px;"></canvas>
             </div>
         </div>
     </div>
@@ -1560,6 +1560,18 @@
         </div>
     </div>
     </div>
+
+    <!-- 引入Chart.js库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <script>
+        // 确保Chart.js加载完成后再执行初始化
+        if (typeof Chart === 'undefined') {
+            window.addEventListener('load', function() {
+                console.log('Chart.js已加载');
+            });
+        }
+    </script>
 
     <script>
         // 在CPU核心上添加鼠标悬停效果
@@ -1640,6 +1652,76 @@
             }
         });
 
+        // GPU温度图表存储
+        const gpuTempCharts = {};
+        
+        // 初始化GPU温度图表
+        function initGPUTempCharts() {
+            // 确保Chart.js已加载
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js未加载，等待加载...');
+                setTimeout(initGPUTempCharts, 100);
+                return;
+            }
+            
+            document.querySelectorAll('.gpu-temp-chart').forEach(canvas => {
+                const gpuIndex = canvas.getAttribute('data-gpu-index');
+                if (gpuIndex === null) return;
+                
+                const ctx = canvas.getContext('2d');
+                gpuTempCharts[gpuIndex] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'GPU温度 (°C)',
+                            data: [],
+                            borderColor: '#ff3860',
+                            backgroundColor: 'rgba(255, 56, 96, 0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2,
+                            pointHoverRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 500
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.05)'
+                                },
+                                ticks: {
+                                    color: '#e9ecef'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#e9ecef'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#e9ecef'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
         // 精确计算CPU芯片容器尺寸
         document.addEventListener('DOMContentLoaded', function() {
             // 获取CPU核心数量
@@ -1731,6 +1813,25 @@
                 }
             }, 100);
         });
+        
+        // 初始化GPU温度图表（等待Chart.js加载完成）
+        function initGPUTempChartsWhenReady() {
+            if (typeof Chart !== 'undefined') {
+                initGPUTempCharts();
+            } else {
+                console.log('等待Chart.js加载...');
+                setTimeout(initGPUTempChartsWhenReady, 100);
+            }
+        }
+        
+        // 在DOM加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initGPUTempChartsWhenReady();
+            });
+        } else {
+            initGPUTempChartsWhenReady();
+        }
 
         // 添加网络速度监控
         let lastRxBytes = 0;
@@ -1804,41 +1905,37 @@
                             
                             // 更新GPU利用率圆环
                             const usage = Math.round(gpu.load || 0);
+                            const clampedUsage = Math.max(0, Math.min(100, usage));
+                            const usageAngle = (clampedUsage / 100) * 360;
+                            
+                            // 更新显示数值
                             const gpuGaugeValue = card.querySelector('.gpu-gauge:first-child .gpu-gauge-value');
                             if (gpuGaugeValue) {
-                                gpuGaugeValue.textContent = `${usage}%`;
+                                gpuGaugeValue.textContent = `${clampedUsage}%`;
                             }
                             
-                            // 更新前半圆
-                            const frontHalfFill = card.querySelector('.gpu-gauge:first-child .gpu-gauge-progress:first-child .gpu-gauge-progress-fill');
-                            if (frontHalfFill) {
-                                frontHalfFill.style.transform = `rotate(${Math.min(180, usage / 100 * 180)}deg)`;
-                            }
-                            
-                            // 更新后半圆
-                            const backHalfFill = card.querySelector('.gpu-gauge:first-child .gpu-gauge-progress:nth-child(2) .gpu-gauge-progress-fill');
-                            if (backHalfFill) {
-                                backHalfFill.style.transform = `rotate(${usage > 50 ? (usage - 50) / 50 * 180 : 0}deg)`;
+                            // 更新圆环（使用CSS变量）
+                            const gpuGaugeCircle = card.querySelector('.gpu-gauge:first-child .gpu-gauge-circle');
+                            if (gpuGaugeCircle) {
+                                gpuGaugeCircle.style.setProperty('--gpu-percent', `${usageAngle}deg`);
                             }
                             
                             // 更新显存利用率圆环
                             if (gpu.memory && typeof gpu.memory.percent !== 'undefined') {
                                 const memUsage = Math.round(gpu.memory.percent);
+                                const clampedMemUsage = Math.max(0, Math.min(100, memUsage));
+                                const memUsageAngle = (clampedMemUsage / 100) * 360;
+                                
+                                // 更新显示数值
                                 const memGaugeValue = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-value');
                                 if (memGaugeValue) {
-                                    memGaugeValue.textContent = `${memUsage}%`;
+                                    memGaugeValue.textContent = `${clampedMemUsage}%`;
                                 }
                                 
-                                // 更新前半圆
-                                const memFrontHalfFill = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-progress:first-child .gpu-gauge-progress-fill');
-                                if (memFrontHalfFill) {
-                                    memFrontHalfFill.style.transform = `rotate(${Math.min(180, memUsage / 100 * 180)}deg)`;
-                                }
-                                
-                                // 更新后半圆
-                                const memBackHalfFill = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-progress:nth-child(2) .gpu-gauge-progress-fill');
-                                if (memBackHalfFill) {
-                                    memBackHalfFill.style.transform = `rotate(${memUsage > 50 ? (memUsage - 50) / 50 * 180 : 0}deg)`;
+                                // 更新圆环（使用CSS变量）
+                                const memGaugeCircle = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-circle');
+                                if (memGaugeCircle) {
+                                    memGaugeCircle.style.setProperty('--gpu-percent', `${memUsageAngle}deg`);
                                 }
                             }
                             
@@ -1864,6 +1961,35 @@
                                     if (temp >= 80) tempElement.classList.add('temp-high');
                                     else if (temp >= 70) tempElement.classList.add('temp-medium');
                                     else tempElement.classList.add('temp-normal');
+                                }
+                            }
+                            
+                            // 更新GPU温度曲线图表
+                            if (gpu.temperature !== undefined && gpu.temperature !== null) {
+                                const chart = gpuTempCharts[index];
+                                if (chart) {
+                                    const now = new Date().toLocaleTimeString();
+                                    
+                                    // 限制数据点数量（保留最近20个点）
+                                    if (chart.data.labels.length >= 20) {
+                                        chart.data.labels.shift();
+                                        chart.data.datasets[0].data.shift();
+                                    }
+                                    
+                                    chart.data.labels.push(now);
+                                    chart.data.datasets[0].data.push(Math.round(gpu.temperature));
+                                    
+                                    // 动态调整Y轴范围（根据当前数据范围）
+                                    if (chart.data.datasets[0].data.length > 0) {
+                                        const minTemp = Math.min(...chart.data.datasets[0].data) - 5;
+                                        const maxTemp = Math.max(...chart.data.datasets[0].data) + 5;
+                                        chart.options.scales.y.min = Math.max(0, minTemp);
+                                        chart.options.scales.y.max = maxTemp;
+                                    }
+                                    
+                                    chart.update('none'); // 不使用动画以提升性能
+                                } else {
+                                    console.warn(`GPU ${index} 的温度图表未初始化`);
                                 }
                             }
                             
