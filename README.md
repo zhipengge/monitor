@@ -1,53 +1,40 @@
 # 硬件监控系统 (Hardware Monitor)
 
-![硬件监控系统截图](images/hw_info.png)
-
 ## 项目简介
 
-硬件监控系统是一个基于Web的实时硬件性能监控工具，提供直观的可视化界面，帮助用户实时了解计算机硬件状态和性能数据。系统采用轻量级设计，资源占用少，适合在后台长期运行进行硬件监控。
+基于 Flask 的硬件监控面板，实时展示 CPU、内存、GPU、磁盘与网络状态，并提供趋势曲线。界面采用统一卡片布局，移动端单列、桌面端双列。
+![](./images/info.png)
 
 ## 主要功能
 
-- **CPU监控**
-  - 实时CPU利用率（总体和每核心）
-  - CPU温度监控（支持多核心温度显示）
-  - CPU频率信息
-  - 芯片式可视化布局，直观展示多核心状态
-
-- **内存状态**
-  - 内存使用率圆环可视化
-  - 内存总量和已用量
-  - 内存类型、频率和通道信息
-
-- **GPU监控**
-  - GPU利用率圆环可视化
-  - 显存使用率圆环可视化
-  - GPU温度实时监控
-  - 支持多GPU系统
-
-- **存储设备监控**
-  - 磁盘使用情况
-  - 分区信息和使用率
-  
-- **网络监控**
-  - 实时上传/下载速度
-  - 自动单位换算(B/s, KB/s, MB/s)
-
+- **CPU**
+  - 总使用率、平均温度、最高/最低核心使用率曲线
+  - 8 列核心网格，显示每核心使用率与温度
+- **内存**
+  - 已用/剩余内存曲线（GB）+ 使用率曲线（%）
+  - 标题栏展示内存类型、频率、总量与通道
+- **GPU**
+  - 多卡单选
+  - 单图表展示负载/显存利用率/温度曲线
+- **存储**
+  - 仅统计可用磁盘（>50GB）总使用率
+  - 挂载点维度的磁盘列表与使用进度
+- **网络**
+  - 顶部实时显示上传/下载速率
+  - 速率趋势曲线
 - **系统信息**
-  - 主机名
-  - 系统运行时间
+  - 操作系统、主机名、运行时间
 
 ## 技术栈
 
 - **后端**: Python (Flask)
-- **前端**: HTML/CSS/JavaScript
-- **数据采集**: 
-  - psutil (CPU, 内存, 磁盘, 网络)
-  - GPUtil (GPU信息)
-  - py-cpuinfo (CPU详细信息)
-  - py-sensors (温度监控)
+- **前端**: HTML/CSS/JavaScript + Chart.js
+- **数据采集**:
+  - psutil (CPU/内存/磁盘/网络)
+  - GPUtil (GPU)
+  - py-cpuinfo (CPU 详细信息)
 
-## 安装与部署
+## 安装与运行
 
 ### 环境要求
 
@@ -56,96 +43,32 @@
 
 ### 依赖安装
 
-使用pipenv (推荐):
+使用 pipenv（推荐）:
 
 ```bash
 pipenv install
 ```
 
-或者使用pip:
+或使用 pip:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 运行方式
-
-1. 启动服务器:
+### 启动
 
 ```bash
 python app.py
 ```
 
-2. 在浏览器中访问:
+浏览器访问:
 
 ```
 http://localhost:5000
 ```
 
-### Docker部署 (可选)
-
-```bash
-# 构建Docker镜像
-docker build -t hardware-monitor .
-
-# 运行容器
-docker run -d -p 5000:5000 --name hw-monitor hardware-monitor
-```
-
-## 自启动配置
-
-### Linux系统 (使用systemd)
-
-1. 创建服务文件:
-
-```bash
-sudo nano /etc/systemd/system/hardware-monitor.service
-```
-
-2. 添加以下内容:
-
-```
-[Unit]
-Description=Hardware Monitor Service
-After=network.target
-
-[Service]
-User=<your_username>
-WorkingDirectory=/path/to/hardware-monitor
-ExecStart=/path/to/python /path/to/hardware-monitor/app.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-3. 启用并启动服务:
-
-```bash
-sudo systemctl enable hardware-monitor
-sudo systemctl start hardware-monitor
-```
-
-### Windows系统
-
-可以通过任务计划程序设置开机自启动:
-
-1. 打开任务计划程序
-2. 创建基本任务
-3. 触发器设置为"计算机启动时"
-4. 操作选择"启动程序"，选择python.exe并添加参数"app.py"和起始位置
-
 ## 注意事项
 
-- GPU监控功能需要安装NVIDIA驱动和相关工具
-- 某些温度和频率信息获取可能需要管理员/root权限
-- 建议定期清理浏览器缓存以获取最新数据
-- 页面每5秒自动刷新一次数据
-
-## 已知问题
-
-- 在某些虚拟环境中，部分硬件信息可能无法获取
-- 不同操作系统可能显示的信息有所不同
-- AMD GPUs可能信息不完整
-
-如有问题或建议，请提交Issues或Pull Request。您的贡献将使这个项目变得更好！
+- GPU 监控需要安装 NVIDIA 驱动与相关工具
+- 温度/频率信息在部分系统下可能需要管理员权限
+- 前端默认每 5 秒刷新一次数据

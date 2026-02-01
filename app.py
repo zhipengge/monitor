@@ -2,7 +2,6 @@ from flask import Flask, render_template, jsonify
 from hardware_info import HardwareInfo
 import traceback
 import logging
-import jinja2
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -122,37 +121,6 @@ def dashboard():
     
     print("Dashboard路由访问")
     return render_template('dashboard.html', **template_data)
-
-@app.route('/test')
-def test():
-    return render_template('test.html', message="测试成功")
-
-@app.route('/dashboard-simple')
-def dashboard_simple():
-    # 获取硬件信息
-    data = hardware_info.get_all_info()
-    
-    # 准备简化版数据
-    cpu_info = data.get('cpu', {})
-    cpu_usage = cpu_info.get('usage_per_core', [])
-    temps = data.get('temperatures', {})
-    cpu_temps = []
-    for key, val in temps.items():
-        if 'core' in key.lower() and 'temp' in key.lower():
-            cpu_temps.append({
-                'name': key,
-                'value': val.get('value', 0)
-            })
-    
-    template_data = {
-        'cpu_percent': cpu_info.get('total_usage', 0),
-        'cpu_name': cpu_info.get('name', 'Unknown CPU'),
-        'cpu_cores': cpu_info.get('cores', 0),
-        'cpu_usage_per_core': cpu_usage,
-        'cpu_temps': cpu_temps,
-    }
-    
-    return render_template('dashboard_simple.html', **template_data)
 
 @app.after_request
 def add_header(response):

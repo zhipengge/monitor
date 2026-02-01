@@ -434,9 +434,13 @@
             {% endif %}
         </div>
 
+        {% set skip_fstypes = ['squashfs', 'tmpfs', 'devtmpfs', 'overlay', 'proc', 'sysfs', 'cgroup', 'pstore', 'autofs', 'debugfs', 'tracefs', 'securityfs', 'mqueue'] %}
         {% set filtered_disks = [] %}
         {% for disk in disks %}
-        {% if disk.total is defined and ((disk.total is number and disk.total/1024/1024/1024 > 50) or (disk.total is not number and disk.total|float/1024/1024/1024 > 50)) %}
+        {% set fs_type = disk.filesystem if disk.filesystem is defined else (disk.fstype if disk.fstype is defined else '') %}
+        {% if disk.total is defined
+              and fs_type not in skip_fstypes
+              and ((disk.total is number and disk.total/1024/1024/1024 > 50) or (disk.total is not number and disk.total|float/1024/1024/1024 > 50)) %}
         {% set _ = filtered_disks.append(disk) %}
         {% endif %}
         {% endfor %}
@@ -470,7 +474,7 @@
                         </div>
                         <div class="meta">
                             {% if disk.device is defined %}{{ disk.device }}{% endif %}
-                            {% if disk.fstype is defined %} ({{ disk.fstype }}){% endif %}
+                            {% if disk.filesystem is defined %} ({{ disk.filesystem }}){% endif %}
                         </div>
                     </div>
                     <div class="disk-usage">
@@ -644,7 +648,7 @@
     function initCharts() {
         charts.cpu = createLineChart('cpu-chart', [
             {
-                label: 'CPU使用率(%)',
+                label: 'CPU使用率',
                 data: [],
                 borderColor: '#4cc9f0',
                 backgroundColor: 'rgba(76, 201, 240, 0.15)',
@@ -652,7 +656,7 @@
                 fill: true
             },
             {
-                label: '平均温度(°C)',
+                label: '平均温度',
                 data: [],
                 borderColor: '#8b5cf6',
                 backgroundColor: 'rgba(139, 92, 246, 0.12)',
@@ -661,7 +665,7 @@
                 yAxisID: 'y1'
             },
             {
-                label: '最高核心使用率(%)',
+                label: '最高核心使用率',
                 data: [],
                 borderColor: '#ef4444',
                 backgroundColor: 'rgba(239, 68, 68, 0.12)',
@@ -670,7 +674,7 @@
                 coreIndex: []
             },
             {
-                label: '最低核心使用率(%)',
+                label: '最低核心使用率',
                 data: [],
                 borderColor: '#7fd3a8',
                 backgroundColor: 'rgba(127, 211, 168, 0.12)',
@@ -747,7 +751,7 @@
 
         charts.memory = createLineChart('memory-chart', [
             {
-                label: '已用内存(GB)',
+                label: '已用内存',
                 data: [],
                 borderColor: '#20c997',
                 backgroundColor: 'rgba(32, 201, 151, 0.12)',
@@ -755,7 +759,7 @@
                 fill: false
             },
             {
-                label: '剩余内存(GB)',
+                label: '剩余内存',
                 data: [],
                 borderColor: '#4cc9f0',
                 backgroundColor: 'rgba(76, 201, 240, 0.12)',
@@ -763,7 +767,7 @@
                 fill: false
             },
             {
-                label: '内存使用率(%)',
+                label: '内存使用率',
                 data: [],
                 borderColor: '#ffb74d',
                 backgroundColor: 'rgba(255, 183, 77, 0.12)',
@@ -778,6 +782,12 @@
                     ticks: {
                         color: '#9bb0c3',
                         callback: (value) => `${value} GB`
+                    },
+                    title: {
+                        display: true,
+                        text: '内存(GB)',
+                        color: '#20c997',
+                        font: { size: 10, weight: '600' }
                     }
                 },
                 y1: {
@@ -803,7 +813,7 @@
 
         charts.network = createLineChart('network-chart', [
             {
-                label: '下载(KB/s)',
+                label: '下载',
                 data: [],
                 borderColor: '#4cc9f0',
                 backgroundColor: 'rgba(76, 201, 240, 0.12)',
@@ -811,14 +821,30 @@
                 fill: false
             },
             {
-                label: '上传(KB/s)',
+                label: '上传',
                 data: [],
                 borderColor: '#20c997',
                 backgroundColor: 'rgba(32, 201, 151, 0.12)',
                 tension: 0.3,
                 fill: false
             }
-        ]);
+        ], {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: '速率(KB/s)',
+                        color: '#4cc9f0',
+                        font: { size: 10, weight: '600' }
+                    },
+                    ticks: {
+                        color: '#9bb0c3',
+                        callback: (value) => `${value} KB/s`
+                    }
+                }
+            }
+        });
 
             const gpuCanvas = document.getElementById('gpu-chart');
         if (gpuCanvas) {
@@ -828,7 +854,7 @@
                 const gpuIndex = parseInt(toggle.dataset.gpuIndex, 10);
                 const palette = getGpuPalette(gpuIndex);
                 datasets.push({
-                    label: `GPU${gpuIndex} 负载(%)`,
+                    label: `GPU${gpuIndex} 负载`,
                     data: [],
                     borderColor: palette.load,
                     backgroundColor: palette.loadBg,
@@ -840,7 +866,7 @@
                     hidden: !toggle.checked
                 });
                 datasets.push({
-                    label: `GPU${gpuIndex} 显存利用率(%)`,
+                    label: `GPU${gpuIndex} 显存利用率`,
                     data: [],
                     borderColor: palette.mem,
                     backgroundColor: palette.memBg,
@@ -852,7 +878,7 @@
                     hidden: !toggle.checked
                 });
                 datasets.push({
-                    label: `GPU${gpuIndex} 温度(°C)`,
+                    label: `GPU${gpuIndex} 温度`,
                     data: [],
                     borderColor: palette.temp,
                     backgroundColor: palette.tempBg,
@@ -866,7 +892,20 @@
             });
             charts.gpu = createLineChart('gpu-chart', datasets, {
                 scales: {
-                    y: { min: 0, max: 100 },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: '使用率(%)',
+                            color: '#4cc9f0',
+                            font: { size: 10, weight: '600' }
+                        },
+                        ticks: {
+                            color: '#9bb0c3',
+                            callback: (value) => `${value}%`
+                        }
+                    },
                     y1: {
                         position: 'right',
                         min: 0,
@@ -1007,9 +1046,12 @@
 
             if (data.disk && Array.isArray(data.disk)) {
                 const minBytes = 50 * 1024 * 1024 * 1024;
+                const skipFs = new Set(['squashfs', 'tmpfs', 'devtmpfs', 'overlay', 'proc', 'sysfs', 'cgroup', 'pstore', 'autofs', 'debugfs', 'tracefs', 'securityfs', 'mqueue']);
                 let total = 0;
                 let used = 0;
                 data.disk.forEach(disk => {
+                    const fsType = (disk.filesystem || disk.fstype || '').toLowerCase();
+                    if (skipFs.has(fsType)) return;
                     if (disk.total !== undefined && disk.used !== undefined) {
                         const t = typeof disk.total === 'number' ? disk.total : parseFloat(disk.total);
                         const u = typeof disk.used === 'number' ? disk.used : parseFloat(disk.used);
