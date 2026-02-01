@@ -1,2038 +1,1096 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>硬件监控仪表盘</title>
+    <title>硬件监控面板</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        body {
-            background-color: #0f1c2e;
-            color: #e9ecef;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
+        :root {
+            --bg: #0f1c2e;
+            --card: #14283b;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text: #e6eef7;
+            --muted: #9bb0c3;
+            --accent: #4cc9f0;
+            --accent-2: #20c997;
+            --warning: #ffb74d;
+            --danger: #ff6b6b;
+            --shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
         }
 
-        h1 {
-            text-align: center;
-            color: #00c3ff;
-            text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
-            margin-bottom: 30px;
-        }
-
-        .cpu-chip-container {
-            display: flex;
-            justify-content: center;
-            margin: 30px 0;
-            perspective: 1000px;
-            width: 100%;
-        }
-
-        .cpu-chip {
-            position: relative;
-            width: 95%;
-            max-width: 1400px;
-            aspect-ratio: auto;
-            min-height: 400px;
-            background: linear-gradient(135deg, #2a2a2a, #3a3a3a, #2a2a2a);
-            border-radius: 10px;
-            padding: 60px 30px 30px;
-            box-shadow:
-                0 10px 30px rgba(0, 0, 0, 0.5),
-                inset 0 0 15px rgba(0, 195, 255, 0.2);
-            transform-style: preserve-3d;
-            transform: rotateX(5deg);
-            transition: transform 0.5s ease;
-            overflow: visible;
-        }
-
-        .cpu-chip:hover {
-            transform: rotateX(0deg);
-        }
-
-        .chip-label {
-            position: absolute;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 5px rgba(0, 195, 255, 0.7);
-            width: 95%;
-        }
-
-        .cpu-name {
-            font-size: 1.3rem;
-            color: #00c3ff;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
-        .cpu-specs {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.8);
-            background: rgba(0, 0, 0, 0.3);
-            padding: 5px;
-            border-radius: 4px;
-            margin-top: 5px;
-        }
-
-        .chip-cores {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 2px;
-            width: 100%;
-            padding: 25px 0 5px 0;
-            max-width: 100%;
-            margin-top: 10px;
-        }
-
-        .chip-core {
-            position: relative;
-            background: #1a1a1a;
-            border: 1px solid rgba(0, 195, 255, 0.3);
-            border-radius: 3px;
-            padding: 5px 2px 3px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-            min-height: 45px;
-            max-width: 90%;
-            margin: 0 auto;
+        * {
             box-sizing: border-box;
         }
 
-        .chip-core:hover {
-            box-shadow: 0 0 15px rgba(0, 195, 255, 0.4);
-            transform: translateY(-3px);
-        }
-
-        .core-id {
-            position: absolute;
-            top: 1px;
-            left: 3px;
-            font-size: 0.55rem;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1;
-        }
-
-        .core-usage {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #00c3ff;
-            text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+        body {
             margin: 0;
-            padding-top: 8px;
-            text-align: center;
-            line-height: 1.1;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Segoe UI", "Inter", Arial, sans-serif;
         }
 
-        .core-temp {
-            font-size: 0.65rem;
-            padding: 1px 2px;
-            border-radius: 3px;
-            background-color: rgba(0, 0, 0, 0.5);
-            margin-top: 2px;
-            text-align: center;
-            width: 80%;
-            font-weight: bold;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            line-height: 1.1;
+        .page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
-        .core-temp::before {
-            content: none;
-        }
-
-        /* 温度颜色 */
-        .temp-normal {
-            color: #7eff00;
-            box-shadow: 0 0 5px rgba(126, 255, 0, 0.4);
-            border-color: rgba(126, 255, 0, 0.2);
-        }
-
-        .temp-medium {
-            color: #ffdd57;
-            box-shadow: 0 0 7px rgba(255, 221, 87, 0.5);
-            border-color: rgba(255, 221, 87, 0.3);
-        }
-
-        .temp-high {
-            color: #ff3860;
-            animation: pulse 1s infinite;
-            box-shadow: 0 0 10px rgba(255, 56, 96, 0.7);
-            border-color: rgba(255, 56, 96, 0.5);
-        }
-
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.7;
-            }
-        }
-
-        /* 添加针脚效果 */
-        .cpu-pins {
-            position: absolute;
+        .page-header {
             display: flex;
+            align-items: center;
             justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
         }
 
-        .cpu-pins-top,
-        .cpu-pins-bottom {
-            bottom: -8px;
-            left: 10%;
-            right: 10%;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .cpu-pins-top {
-            top: -8px;
+        .header-icon {
+            font-size: 1.8rem;
+            color: var(--accent);
         }
 
-        .cpu-pins-left,
-        .cpu-pins-right {
-            top: 10%;
-            bottom: 10%;
-            flex-direction: column;
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.4rem;
         }
 
-        .cpu-pins-left {
-            left: -8px;
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 2px;
         }
 
-        .cpu-pins-right {
-            right: -8px;
-        }
-
-        .pin {
-            background-color: #888;
-            border-radius: 1px;
-        }
-
-        .cpu-pins-top .pin,
-        .cpu-pins-bottom .pin {
-            width: 4px;
-            height: 8px;
-        }
-
-        .cpu-pins-left .pin,
-        .cpu-pins-right .pin {
-            width: 8px;
-            height: 4px;
-        }
-
-        .monitors-container {
+        .header-right {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
-            margin-top: 40px;
-            justify-content: center;
+            gap: 10px;
         }
 
-        .monitor-card {
-            background: #1a2c42;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            flex: 1;
-            min-width: 300px;
-            max-width: 500px;
-        }
-
-        .monitor-card h2 {
-            margin-top: 0;
-            color: #00c3ff;
-            font-size: 1.3rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
-        }
-
-        /* 内存卡片 */
-        .memory-circle {
-            width: 150px;
-            height: 150px;
-            margin: 20px auto;
-            position: relative;
-            border-radius: 50%;
+        .meta-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            background: conic-gradient(
-                #20c997 0% var(--memory-percent, 0%), 
-                #253850 var(--memory-percent, 0%) 100%
-            );
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--muted);
         }
 
-        .memory-circle-inner {
-            width: 120px;
-            height: 120px;
-            background: #1a2c42;
-            border-radius: 50%;
+        .meta-item i {
+            color: var(--accent);
+        }
+
+        .grid {
+            column-count: 1;
+            column-gap: 16px;
+            margin-top: 16px;
+        }
+
+        @media (min-width: 900px) {
+            .grid {
+                column-count: 2;
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
             display: flex;
             flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            display: flex;
             align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
-        }
-
-        .memory-percent {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #20c997;
-            text-shadow: 0 0 10px rgba(32, 201, 151, 0.5);
-        }
-
-        .memory-label {
-            font-size: 0.9rem;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        .memory-details {
-            text-align: center;
-            font-size: 0.9rem;
-            color: #e9ecef;
-            margin-top: 5px;
-        }
-
-        /* 温度卡片 */
-        .temp-list {
-            margin-top: 20px;
-        }
-
-        .temp-item {
-            display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 12px;
         }
 
-        .temp-name {
-            font-size: 0.9rem;
-        }
-
-        .temp-value {
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        /* 磁盘监控卡片 */
-        .disk-card {
-            background: #1a2c42;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            flex: 1;
-            min-width: 300px;
-            max-width: 500px;
-        }
-
-        .disk-list {
-            margin-top: 20px;
-        }
-
-        .disk-item {
-            margin-bottom: 15px;
-        }
-
-        .disk-header {
+        .card-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .disk-details {
+        .card-title i {
+            color: var(--accent);
+        }
+
+        .title-meta {
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-weight: 500;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .card-subtitle {
+            color: var(--muted);
             font-size: 0.85rem;
-            color: #aaa;
             text-align: right;
-            margin-top: 3px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .stats-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .stat .label {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .stat .value {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 4px;
         }
 
         .progress {
             height: 8px;
-            background-color: #253850;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 999px;
             overflow: hidden;
         }
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #20c997, #00c3ff);
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            width: 0%;
+            transition: width 0.3s ease;
         }
 
-        /* GPU监控卡片 */
-        .gpu-card {
-            background: #1a2c42;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            flex: 1;
-            min-width: 300px;
-            max-width: 500px;
+        .chart {
+            height: 170px;
         }
 
-        .gpu-list {
-            margin-top: 20px;
+        .chart-sm {
+            height: 140px;
         }
 
-        .gpu-item {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .chart canvas {
+            width: 100% !important;
+            height: 100% !important;
         }
 
-        .gpu-name {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #00c3ff;
-        }
-
-        .gpu-stat {
-            margin-bottom: 12px;
-        }
-
-        .gpu-progress {
-            margin: 5px 0;
-        }
-
-        .gpu-temp {
-            margin-top: 10px;
-        }
-
-        /* 系统信息样式 */
-        .system-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 30px 0;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-
-        .system-time {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #00c3ff;
-            margin-bottom: 10px;
-        }
-
-        .system-details {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-        }
-
-        .system-item {
-            display: flex;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 5px 15px;
-            border-radius: 20px;
-        }
-
-        .system-icon {
-            margin-right: 8px;
-        }
-
-        .updating {
-            position: relative;
-        }
-
-        .updating::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 195, 255, 0.2);
-            border-radius: 6px;
-            animation: fadeOut 0.5s ease forwards;
-        }
-
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-
-            to {
-                opacity: 0;
-            }
-        }
-
-        /* 修改CPU芯片部分，突出显示温度 */
-        .chip-cores {
+        .core-grid {
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 2px;
-            width: 100%;
-            padding: 25px 0 5px 0;
-            max-width: 100%;
-            margin-top: 10px;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 8px;
+            max-height: 240px;
+            overflow: auto;
+            padding-right: 4px;
         }
 
-        .chip-core {
-            position: relative;
-            background: #1a1a1a;
-            border: 1px solid rgba(0, 195, 255, 0.3);
-            border-radius: 3px;
-            padding: 5px 2px 3px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-            min-height: 45px;
-            max-width: 90%;
-            margin: 0 auto;
-            box-sizing: border-box;
+        .core-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 4px;
+            text-align: center;
+            line-height: 1.1;
         }
 
-        .chip-core:hover {
-            box-shadow: 0 0 15px rgba(0, 195, 255, 0.4);
-            transform: translateY(-3px);
-        }
-
-        .core-id {
-            position: absolute;
-            top: 1px;
-            left: 3px;
-            font-size: 0.55rem;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1;
+        .core-label {
+            font-size: 0.62rem;
+            color: var(--muted);
         }
 
         .core-usage {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #00c3ff;
-            text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
-            margin: 0;
-            padding-top: 8px;
-            text-align: center;
-            line-height: 1.1;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 2px;
         }
 
         .core-temp {
             font-size: 0.65rem;
-            padding: 1px 2px;
-            border-radius: 3px;
-            background-color: rgba(0, 0, 0, 0.5);
             margin-top: 2px;
-            text-align: center;
-            width: 80%;
-            font-weight: bold;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            line-height: 1.1;
+            color: var(--accent-2);
         }
 
-        /* 温度颜色 */
-        .temp-normal {
-            color: #7eff00;
-            box-shadow: 0 0 5px rgba(126, 255, 0, 0.4);
-            border-color: rgba(126, 255, 0, 0.2);
+        .core-high .core-usage {
+            color: var(--danger);
         }
 
-        .temp-medium {
-            color: #ffdd57;
-            box-shadow: 0 0 7px rgba(255, 221, 87, 0.5);
-            border-color: rgba(255, 221, 87, 0.3);
+        .core-medium .core-usage {
+            color: var(--warning);
         }
 
-        .temp-high {
-            color: #ff3860;
-            animation: pulse 1s infinite;
-            box-shadow: 0 0 10px rgba(255, 56, 96, 0.7);
-            border-color: rgba(255, 56, 96, 0.5);
+        .core-low .core-usage {
+            color: var(--accent);
         }
 
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.7;
-            }
-        }
-
-        /* 添加针脚效果 */
-        .cpu-pins {
-            position: absolute;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .cpu-pins-top,
-        .cpu-pins-bottom {
-            bottom: -8px;
-            left: 10%;
-            right: 10%;
-        }
-
-        .cpu-pins-top {
-            top: -8px;
-        }
-
-        .cpu-pins-left,
-        .cpu-pins-right {
-            top: 10%;
-            bottom: 10%;
-            flex-direction: column;
-        }
-
-        .cpu-pins-left {
-            left: -8px;
-        }
-
-        .cpu-pins-right {
-            right: -8px;
-        }
-
-        .pin {
-            background-color: #888;
-            border-radius: 1px;
-        }
-
-        .cpu-pins-top .pin,
-        .cpu-pins-bottom .pin {
-            width: 4px;
-            height: 8px;
-        }
-
-        .cpu-pins-left .pin,
-        .cpu-pins-right .pin {
-            width: 8px;
-            height: 4px;
-        }
-
-        .chip-core.core-high {
-            border-color: #ff3860;
-            box-shadow: 0 0 15px rgba(255, 56, 96, 0.4);
-        }
-
-        .chip-core.core-medium {
-            border-color: #ffdd57;
-            box-shadow: 0 0 15px rgba(255, 221, 87, 0.4);
-        }
-
-        .chip-core.core-low {
-            border-color: #7eff00;
-            box-shadow: 0 0 15px rgba(126, 255, 0, 0.4);
-        }
-
-        .core-circuit-lines {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            opacity: 0.2;
-            background-image:
-                linear-gradient(90deg, transparent 50%, rgba(0, 195, 255, 0.5) 50%),
-                linear-gradient(0deg, transparent 50%, rgba(0, 195, 255, 0.5) 50%);
-            background-size: 10px 10px;
-            border-radius: 5px;
-            z-index: 0;
-        }
-
-        /* 动态温度指示器 */
-        .core-temp::before {
-            content: none;
-        }
-
-        .temp-high::before {
-            background-color: #ff3860;
-            box-shadow: 0 0 5px #ff3860;
-            animation: blink 0.8s infinite;
-        }
-
-        .temp-medium::before {
-            background-color: #ffdd57;
-            box-shadow: 0 0 3px #ffdd57;
-        }
-
-        .temp-normal::before {
-            background-color: #7eff00;
-            box-shadow: 0 0 3px #7eff00;
-        }
-
-        @keyframes blink {
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.3;
-            }
-        }
-
-        /* 温度更新时的动画效果 */
-        .temp-update {
-            animation: temp-flash 0.8s ease;
-        }
-
-        @keyframes temp-flash {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.1);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        /* CPU额外信息区域样式 */
-        .cpu-extra-info {
-            grid-column: span 2;
-            grid-row: span 2;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 6px;
-            padding: 15px;
+        .list {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            border: 1px solid rgba(0, 195, 255, 0.3);
+            gap: 8px;
         }
 
-        .cpu-info-item {
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .cpu-info-label {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.85rem;
-        }
-
-        .cpu-info-value {
-            color: #00c3ff;
-            font-weight: bold;
-        }
-
-        /* 存储设备样式 - 硬盘形状 */
-        .storage-devices {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            margin: 40px 0;
-        }
-
-        .disk-device {
-            position: relative;
-            width: 280px;
-            height: 180px;
-            background: linear-gradient(45deg, #202020, #303030);
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(150, 150, 150, 0.2);
-        }
-
-        .disk-top {
-            display: flex;
-            margin-bottom: 15px;
-        }
-
-        .disk-visual {
-            width: 80px;
-            height: 80px;
-            position: relative;
-            margin-right: 15px;
-        }
-
-        .disk-platter {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: #555;
-            border-radius: 50%;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+        .list-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            transition: transform 3s linear;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
         }
 
-        .disk-platter:after {
-            content: '';
-            width: 30%;
-            height: 30%;
-            background: #777;
-            border-radius: 50%;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        .list-item .name {
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
-        .disk-platter:before {
-            content: '';
-            position: absolute;
-            width: 60%;
-            height: 60%;
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            box-sizing: border-box;
-        }
-
-        .disk-read-head {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            width: 20px;
-            height: 5px;
-            background: #999;
-            transform-origin: left center;
-            transform: translateX(-50%) rotate(45deg);
-        }
-
-        .disk-info {
-            flex: 1;
-        }
-
-        .disk-name {
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: #00c3ff;
-            margin-bottom: 5px;
-        }
-
-        .disk-type {
-            font-size: 0.85rem;
-            color: #aaa;
-            margin-bottom: 10px;
-        }
-
-        .disk-capacity {
-            font-weight: bold;
+        .list-item .meta {
+            font-size: 0.8rem;
+            color: var(--muted);
         }
 
         .disk-usage {
-            margin-top: 15px;
+            min-width: 140px;
+            text-align: right;
         }
 
-        .progress-container {
-            height: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
-            overflow: hidden;
-            margin-bottom: 5px;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #20c997, #00c3ff);
-            border-radius: 5px;
-            transition: width 0.5s ease;
-        }
-
-        .disk-detail-row {
+        .kv {
             display: flex;
             justify-content: space-between;
+            gap: 8px;
             font-size: 0.85rem;
-            margin-top: 10px;
+            color: var(--muted);
         }
 
-        .disk-detail-label {
-            color: #aaa;
+        .kv strong {
+            color: var(--text);
+            font-weight: 600;
         }
 
-        .disk-detail-value {
-            color: white;
+        .gpu-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
         }
 
-        /* GPU卡片样式 */
-        .gpu-cards {
+        .gpu-select {
             display: flex;
             flex-wrap: wrap;
-            gap: 30px;
-            justify-content: center;
-            margin: 40px 0;
+            gap: 8px;
         }
 
-        .gpu-card {
-            position: relative;
-            width: 600px;
-            background: linear-gradient(to bottom, #202020, #303030);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(100, 100, 100, 0.3);
-        }
-
-        .gpu-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 15px;
-        }
-
-        .gpu-name {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: #00c3ff;
-            text-shadow: 0 0 10px rgba(0, 195, 255, 0.4);
-        }
-
-        .gpu-body {
-            display: flex;
-            height: 200px;
-        }
-
-        .gpu-specs {
-            flex: 1;
-            padding-right: 20px;
-        }
-
-        .gpu-spec-item {
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .gpu-spec-label {
-            color: #aaa;
-        }
-
-        .gpu-spec-value {
-            color: white;
-            font-weight: bold;
-        }
-
-        .gpu-visual {
-            display: flex;
-            gap: 20px;
+        .gpu-option {
+            display: inline-flex;
             align-items: center;
-        }
-
-        .gpu-gauge {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .gpu-gauge-circle {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: conic-gradient(
-                from -90deg,
-                #00c3ff 0deg,
-                #20c997 var(--gpu-percent, 0deg),
-                #253850 var(--gpu-percent, 0deg),
-                #253850 360deg
-            );
-            padding: 8px;
-            box-sizing: border-box;
-            transition: background 0.5s ease;
-        }
-
-        .gpu-gauge-circle::before {
-            content: '';
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            width: calc(100% - 16px);
-            height: calc(100% - 16px);
-            border-radius: 50%;
-            background: #1a1a1a;
-            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
-        }
-
-        .gpu-gauge-center {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .gpu-gauge-value {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: #00c3ff;
-            text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
-        }
-
-        .gpu-gauge-label {
-            font-size: 0.7rem;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        .gpu-fan {
-            width: 60px;
-            height: 60px;
-            background-image: radial-gradient(circle, #333 20%, transparent 20%),
-                conic-gradient(from 0deg,
-                    transparent 0deg, transparent 30deg,
-                    #555 30deg, #555 60deg,
-                    transparent 60deg, transparent 90deg,
-                    #555 90deg, #555 120deg,
-                    transparent 120deg, transparent 150deg,
-                    #555 150deg, #555 180deg,
-                    transparent 180deg, transparent 210deg,
-                    #555 210deg, #555 240deg,
-                    transparent 240deg, transparent 270deg,
-                    #555 270deg, #555 300deg,
-                    transparent 300deg, transparent 330deg,
-                    #555 330deg, #555 360deg);
-            border-radius: 50%;
-            transition: transform 0.5s linear;
-        }
-
-        /* 存储设备卡片样式 */
-        .storage-devices-compact {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .disk-item {
-            background: rgba(0, 0, 0, 0.2);
+            gap: 6px;
+            padding: 6px 10px;
             border-radius: 8px;
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .disk-item:hover {
-            background: rgba(0, 0, 0, 0.3);
-            border-color: rgba(0, 195, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .disk-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .disk-icon {
-            width: 40px;
-            height: 40px;
-            position: relative;
-            margin-right: 15px;
-        }
-
-        .disk-platter-mini {
-            width: 100%;
-            height: 100%;
-            background: #555;
-            border-radius: 50%;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
-            animation: rotate 6s linear infinite;
-        }
-
-        @keyframes rotate {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .disk-title {
-            flex-grow: 1;
-        }
-
-        .disk-name {
-            font-weight: bold;
-            color: #00c3ff;
-            margin-bottom: 5px;
-        }
-
-        .disk-info {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             font-size: 0.85rem;
-            color: #aaa;
+            color: var(--muted);
         }
 
-        .disk-usage-bar {
-            margin-top: 5px;
+        .gpu-option input {
+            accent-color: var(--accent);
         }
 
-        .disk-usage-text {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        /* GPU卡片样式改进 */
-        .gpu-card {
-            max-width: 100%;
-        }
-
-        .gpu-body {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-top: 15px;
-        }
-
-        .gpu-specs {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .gpu-visual {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .gpu-gauge {
-            position: relative;
-            width: 120px;
-            height: 120px;
-        }
-
-        /* 调整alert样式 */
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .alert-info {
-            background: rgba(0, 123, 255, 0.1);
-            border: 1px solid rgba(0, 123, 255, 0.3);
-            color: #aaa;
-        }
-
-        /* 响应式调整 */
-        @media (max-width: 1400px) {
-            .chip-cores {
-                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-            }
-            
-            .core-usage {
-                font-size: 1.2rem;
-            }
-        }
-        
-        @media (max-width: 900px) {
-            .chip-cores {
-                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-                gap: 8px;
-            }
-            
-            .chip-core {
-                min-height: 75px;
-                padding: 10px 5px 5px;
-            }
-            
-            .core-usage {
-                font-size: 1.1rem;
-            }
-            
-            .core-temp {
-                font-size: 0.75rem;
-                padding: 2px 4px;
-            }
-        }
-
-        /* 添加CPU平均使用率显示 */
-        .cpu-usage-average {
-            text-align: center; 
-            margin: 5px 0;
-            font-size: 0.95rem;
-            color: #e9ecef;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 5px 10px;
-            border-radius: 5px;
-            width: fit-content;
-            margin: 5px auto;
-            font-weight: bold;
-        }
-        
-        .cpu-usage-value {
-            color: #00c3ff;
-            text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
-        }
-        
-        /* 系统信息和网速显示 */
-        .system-info-bar,
-        .system-info-item,
-        .network-speeds,
-        .network-speed,
-        .network-icon,
-        .upload-speed,
-        .download-speed {
-            display: none;
-        }
-        
-        /* 移除内存扩展信息样式 */
-        .memory-specs,
-        .memory-spec-item,
-        .memory-spec-value {
-            display: none;
-        }
-        
-        /* 移除GPU频率信息样式 */
-        .gpu-frequencies,
-        .gpu-freq-item,
-        .gpu-freq-value {
-            display: none;
-        }
-
-        /* 内存频率信息样式 */
-        .memory-info {
-            margin-top: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
-            padding: 8px 10px;
-            font-size: 0.85rem;
-        }
-        
-        .memory-info-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-        
-        .memory-info-value {
-            color: #20c997;
-            font-weight: bold;
-        }
-        
-        /* GPU频率信息样式 */
-        .gpu-specs-details {
-            margin-top: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
-            padding: 10px;
-        }
-        
-        /* GPU温度曲线图表样式 */
-        .gpu-temp-chart-container {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .gpu-temp-chart {
-            width: 100%;
-            height: 200px;
-        }
-        
-        .gpu-spec-detail {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 0.85rem;
-        }
-        
-        .gpu-spec-detail-value {
-            color: #00c3ff;
-            font-weight: bold;
-        }
-        
-        /* 网络速度显示样式 */
-        .system-item {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
-            padding: 8px 12px;
-            margin: 10px 0;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .network-speed {
-            display: flex;
-            align-items: center;
-            margin: 0 10px;
-        }
-        
-        .network-icon {
-            margin-right: 8px;
-            font-size: 0.9rem;
-        }
-        
-        .download-speed {
-            color: #00c3ff;
-        }
-        
-        .upload-speed {
-            color: #20c997;
+        .muted {
+            color: var(--muted);
         }
     </style>
 </head>
-
 <body>
-    <h1>电脑硬件信息监控</h1>
-    <div class="system-info">
-        <div id="current-time" class="system-time"></div>
-        <div class="system-details">
-            <div class="system-item">
-                <i class="system-icon">💻</i>
-                <span>{{ system.os }}</span>
-            </div>
-            <div class="system-item">
-                <i class="system-icon">📋</i>
-                <span>{{ system.hostname }}</span>
-            </div>
-            <div class="system-item">
-                <i class="system-icon">⏱️</i>
-                <span>{{ system.uptime }}</span>
-            </div>
-            <div class="system-item">
-                <div class="network-speed download-speed">
-                    <i class="fas fa-arrow-down network-icon"></i>
-                    <span id="download-speed">0 KB/s</span>
-                </div>
-                <div class="network-speed upload-speed">
-                    <i class="fas fa-arrow-up network-icon"></i>
-                    <span id="upload-speed">0 KB/s</span>
-                </div>
+<div class="page">
+    <header class="page-header">
+        <div class="header-left">
+            <i class="fas fa-chart-line header-icon"></i>
+            <div>
+                <h1>硬件监控面板</h1>
+                <div class="subtitle">实时硬件状态与趋势</div>
             </div>
         </div>
-    </div>
+        <div class="header-right">
+            <div class="meta-item"><i class="fas fa-desktop"></i><span>{{ system.os }}</span></div>
+            <div class="meta-item"><i class="fas fa-server"></i><span>{{ system.hostname }}</span></div>
+            <div class="meta-item"><i class="fas fa-clock"></i><span id="current-time"></span></div>
+            <div class="meta-item"><i class="fas fa-hourglass-half"></i><span>{{ system.uptime }}</span></div>
+            <div class="meta-item"><i class="fas fa-arrow-down"></i><span id="network-down">0 KB/s</span></div>
+            <div class="meta-item"><i class="fas fa-arrow-up"></i><span id="network-up">0 KB/s</span></div>
+        </div>
+    </header>
 
-    <div class="monitors-container">
-        <!-- CPU状态 -->
-        <div class="monitor-card cpu-card">
-            <h2>CPU状态</h2>
-            <div class="cpu-chip-container">
-                <div class="cpu-chip">
-                    <div class="chip-label">
-                        <div class="cpu-name">{{ cpu_name }}</div>
-                        <div class="cpu-specs">
-                            {{ cpu_cores }}核心 | 平均使用率: {{ cpu_percent }}% |
-                            {% set total_temp = 0 %}
-                            {% set count = 0 %}
-                            {% for temp in cpu_temps %}
-                            {% set total_temp = total_temp + temp.value %}
-                            {% set count = count + 1 %}
-                            {% endfor %}
-                            {% if count > 0 %}
-                            平均温度: {{ (total_temp / count)|round(1) }}°C
-                            {% endif %}
-                        </div>
-                    </div>
+    <section class="grid">
+        {% set total_temp = 0 %}
+        {% set count = 0 %}
+        {% for temp in cpu_temps %}
+        {% set total_temp = total_temp + temp.value %}
+        {% set count = count + 1 %}
+        {% endfor %}
+        {% set avg_temp = (total_temp / count) if count > 0 else 0 %}
 
-                    <div class="chip-cores">
-                        {% for i in range(cpu_usage_per_core|length) %}
-                        <div
-                            class="chip-core {% if cpu_usage_per_core[i] > 80 %}core-high{% elif cpu_usage_per_core[i] > 50 %}core-medium{% else %}core-low{% endif %}">
-                            <div class="core-id">Core{{ i }}</div>
-                            <div class="core-usage">{{ cpu_usage_per_core[i] }}%</div>
-
-                            <!-- 直接从cpu_temps数组获取温度 -->
-                            {% if i < cpu_temps|length %} <div
-                                class="core-temp {% if cpu_temps[i].value > 70 %}temp-medium{% elif cpu_temps[i].value > 60 %}temp-normal{% else %}temp-normal{% endif %}">
-                                {{ cpu_temps[i].value }}°C
-                        </div>
+        <div class="card cpu-card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-microchip"></i> CPU</h2>
+                <div class="card-subtitle">{{ cpu_name }}</div>
+            </div>
+            <div class="chart">
+                <canvas id="cpu-chart"></canvas>
+            </div>
+            <div class="core-grid" id="core-grid">
+                {% for i in range(cpu_usage_per_core|length) %}
+                <div class="core-item" data-core-index="{{ i }}">
+                    <div class="core-label">Core {{ i }}</div>
+                    <div class="core-usage">{{ cpu_usage_per_core[i]|round(1) }}%</div>
+                    <div class="core-temp">
+                        {% if i < cpu_temps|length %}
+                            {{ cpu_temps[i].value }}°C
                         {% else %}
-                        <div class="core-temp temp-normal">N/A</div>
+                            N/A
                         {% endif %}
-
-                        <div class="core-circuit-lines"></div>
                     </div>
-                    {% endfor %}
                 </div>
-
-                <!-- 添加针脚 -->
-                <div class="cpu-pins cpu-pins-top">
-                    {% for i in range(15) %}
-                    <div class="pin"></div>
-                    {% endfor %}
-                </div>
-                <div class="cpu-pins cpu-pins-right">
-                    {% for i in range(10) %}
-                    <div class="pin"></div>
-                    {% endfor %}
-                </div>
-                <div class="cpu-pins cpu-pins-bottom">
-                    {% for i in range(15) %}
-                    <div class="pin"></div>
-                    {% endfor %}
-                </div>
-                <div class="cpu-pins cpu-pins-left">
-                    {% for i in range(10) %}
-                    <div class="pin"></div>
-                    {% endfor %}
-                </div>
+                {% endfor %}
             </div>
         </div>
-        
-    </div>
 
-
-    <!-- 内存状态 -->
-    <div class="monitor-card memory-card">
-        <h2>内存状态</h2>
-        <div class="memory-circle" style="--memory-percent: {{ memory.percent if memory and memory.percent is defined else 0 }}%">
-            <div class="memory-circle-inner">
-                <div class="memory-percent">{{ memory.percent if memory and memory.percent is defined else 0 }}%</div>
-                <div class="memory-label">空闲</div>
+        <div class="card memory-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-memory"></i> 内存
+                    <span class="title-meta">
+                        <span id="memory-type">{{ memory.type if memory and memory.type else 'Unknown' }}</span>
+                        <span id="memory-frequency">{{ memory.frequency if memory and memory.frequency else 'Unknown' }} MHz</span>
+                        <span id="memory-total">
+                            {% if memory and memory.total is defined %}
+                                {{ "%.1f"|format(memory.total/1073741824) }} GB
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                        <span id="memory-channels">{{ memory.channels if memory and memory.channels else 'Unknown' }}</span>
+                    </span>
+                </h2>
+                <div class="card-subtitle">实时使用情况</div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" id="memory-progress" style="width: {{ memory.percent if memory and memory.percent is defined else 0 }}%"></div>
+            </div>
+            <div class="chart chart-sm">
+                <canvas id="memory-chart"></canvas>
             </div>
         </div>
-        <div class="memory-details">
-            {% if memory and memory.used is defined and memory.total is defined %}
-                已用: {{ "%.1f"|format(memory.used/1073741824) }} GB / 总计: {{ "%.1f"|format(memory.total/1073741824) }} GB
+
+        <div class="card gpu-card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-layer-group"></i> GPU</h2>
+                <div class="card-subtitle">多卡趋势</div>
+            </div>
+            {% if gpu_info and gpu_info|length > 0 %}
+            <div class="gpu-select" id="gpu-select">
+                {% for gpu in gpu_info %}
+                <label class="gpu-option">
+                    <input class="gpu-toggle" type="radio" name="gpu-select" data-gpu-index="{{ loop.index0 }}" {% if loop.first %}checked{% endif %}>
+                    <span>GPU{{ loop.index0 }} {{ gpu.name if gpu.name is defined else '未知GPU' }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="chart chart-sm">
+                <canvas id="gpu-chart"></canvas>
+            </div>
             {% else %}
-                内存信息不可用
+            <div class="muted">未检测到GPU</div>
             {% endif %}
         </div>
-        <div class="memory-info">
-            <div class="memory-info-item">
-                <span>类型:</span>
-                <span class="memory-info-value" id="memory-type">{{ memory.type if memory and memory.type else 'Unknown' }}</span>
-            </div>
-            <div class="memory-info-item">
-                <span>频率:</span>
-                <span class="memory-info-value" id="memory-frequency">{{ memory.frequency if memory and memory.frequency else 'Unknown' }} MHz</span>
-            </div>
-            <div class="memory-info-item">
-                <span>通道:</span>
-                <span class="memory-info-value" id="memory-channels">{{ memory.channels if memory and memory.channels else 'Unknown' }}</span>
-            </div>
-        </div>
-    </div>
 
-    <!-- 恢复GPU卡片与圆环显示 -->
-    {% for gpu in gpu_info %}
-    <div class="gpu-card">
-        <h2>{{ gpu.name if gpu.name is defined else '未知GPU' }}</h2>
-        <div class="gpu-body">
-            <!-- GPU规格信息 -->
-            <div class="gpu-specs">
-                <div class="gpu-spec-item">
-                    <span class="gpu-spec-label">总显存:</span>
-                    <span class="gpu-spec-value">{{ gpu.memory.total if gpu.memory.total is defined else 'N/A' }}</span>
+        {% set filtered_disks = [] %}
+        {% for disk in disks %}
+        {% if disk.total is defined and ((disk.total is number and disk.total/1024/1024/1024 > 50) or (disk.total is not number and disk.total|float/1024/1024/1024 > 50)) %}
+        {% set _ = filtered_disks.append(disk) %}
+        {% endif %}
+        {% endfor %}
+        {% set disk_ns = namespace(total=0, used=0) %}
+        {% for disk in filtered_disks %}
+        {% if disk.total is defined and disk.used is defined %}
+        {% set disk_ns.total = disk_ns.total + (disk.total if disk.total is number else disk.total|float) %}
+        {% set disk_ns.used = disk_ns.used + (disk.used if disk.used is number else disk.used|float) %}
+        {% endif %}
+        {% endfor %}
+        {% set disk_percent = (disk_ns.used / disk_ns.total * 100) if disk_ns.total > 0 else 0 %}
+
+        <div class="card storage-card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-hdd"></i> 存储</h2>
+                <div class="card-subtitle">总使用率 <span id="disk-percent">{{ disk_percent|round(1) }}%</span></div>
+            </div>
+            <div class="list">
+                {% if filtered_disks|length > 0 %}
+                {% for disk in filtered_disks|sort(attribute='total', reverse=true) %}
+                <div class="list-item">
+                    <div>
+                        <div class="name">
+                            {% if disk.mountpoint is defined and disk.mountpoint %}
+                                {{ disk.mountpoint }}
+                            {% elif disk.device is defined %}
+                                {{ disk.device }}
+                            {% else %}
+                                未知挂载
+                            {% endif %}
+                        </div>
+                        <div class="meta">
+                            {% if disk.device is defined %}{{ disk.device }}{% endif %}
+                            {% if disk.fstype is defined %} ({{ disk.fstype }}){% endif %}
+                        </div>
+                    </div>
+                    <div class="disk-usage">
+                        <div class="meta">
+                            {% if disk.used is defined and disk.total is defined %}
+                            {{ "%.1f"|format(disk.used|float/1024/1024/1024) }} / {{ "%.1f"|format(disk.total|float/1024/1024/1024) }} GB
+                            {% endif %}
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: {{ disk.percent if disk.percent is defined else 0 }}%"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="gpu-spec-item">
-                    <span class="gpu-spec-label">可用显存:</span>
-                    <span class="gpu-spec-value">{{ gpu.memory.free if gpu.memory.free is defined else 'N/A' }}</span>
-                </div>
-                {% if gpu.temperature is defined %}
-                <div class="gpu-spec-item">
-                    <span class="gpu-spec-label">GPU温度:</span>
-                    <span class="gpu-spec-value gpu-temp-value
-                            {% if gpu.temperature > 80 %}temp-high{% 
-                            elif gpu.temperature > 70 %}temp-medium{% 
-                            else %}temp-normal{% endif %}">
-                        {{ gpu.temperature }}°C
-                    </span>
-                    <span class="gpu-temp-indicator"></span>
-                </div>
+                {% endfor %}
+                {% else %}
+                <div class="muted">暂无可用磁盘数据</div>
                 {% endif %}
             </div>
+        </div>
 
-            <!-- GPU利用率可视化 -->
-            <div class="gpu-visual">
-                <!-- GPU利用率圆环 -->
-                <div class="gpu-gauge">
-                    {% set usage_raw = gpu.load if gpu.load is defined else 0 %}
-                    {% set usage = (usage_raw|round)|int %}
-                    {% set usage_clamped = usage if usage >= 0 and usage <= 100 else (0 if usage < 0 else 100) %}
-                    {% set usage_angle = (usage_clamped / 100 * 360) %}
-                    <div class="gpu-gauge-circle" style="--gpu-percent: {{ usage_angle }}deg;"></div>
-                    <div class="gpu-gauge-center">
-                        <span class="gpu-gauge-value">{{ usage_clamped }}%</span>
-                        <span class="gpu-gauge-label">GPU利用率</span>
-                    </div>
-                </div>
-                
-                <!-- 显存利用率圆环 -->
-                <div class="gpu-gauge">
-                    {% set mem_usage_raw = gpu.memory.percent if gpu.memory.percent is defined else 0 %}
-                    {% set mem_usage = (mem_usage_raw|round)|int %}
-                    {% set mem_usage_clamped = mem_usage if mem_usage >= 0 and mem_usage <= 100 else (0 if mem_usage < 0 else 100) %}
-                    {% set mem_usage_angle = (mem_usage_clamped / 100 * 360) %}
-                    <div class="gpu-gauge-circle" style="--gpu-percent: {{ mem_usage_angle }}deg;"></div>
-                    <div class="gpu-gauge-center">
-                        <span class="gpu-gauge-value">{{ mem_usage_clamped }}%</span>
-                        <span class="gpu-gauge-label">显存利用率</span>
-                    </div>
-                </div>
+        <div class="card network-card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-network-wired"></i> 网络</h2>
+                <div class="card-subtitle">实时上传/下载</div>
             </div>
-            
-            <!-- GPU温度曲线图表 -->
-            <div class="gpu-temp-chart-container">
-                <h3 style="color: #00c3ff; margin-bottom: 10px; text-align: center;">GPU温度曲线</h3>
-                <canvas id="gpu-temp-chart-{{ loop.index0 }}" class="gpu-temp-chart" data-gpu-index="{{ loop.index0 }}" style="max-height: 200px;"></canvas>
+            <div class="chart chart-sm">
+                <canvas id="network-chart"></canvas>
             </div>
         </div>
-    </div>
-    {% endfor %}
+    </section>
+</div>
 
-    <!-- 存储设备卡片 -->
-    <div class="monitor-card storage-card">
-        <h2>存储设备</h2>
-        <div class="storage-devices-compact">
-            {% set filtered_disks = [] %}
-            {% for disk in disks %}
-            {% if disk.total is defined and ((disk.total is number and disk.total/1024/1024/1024 > 50) or (disk.total is
-            not number and disk.total|float/1024/1024/1024 > 50)) %}
-            {% set _ = filtered_disks.append(disk) %}
-            {% endif %}
-            {% endfor %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    const HISTORY_LIMIT = 60;
+    const charts = {
+        cpu: null,
+        memory: null,
+        disk: null,
+        network: null,
+        gpu: null
+    };
 
-            {% if filtered_disks|length > 0 %}
-            {% for disk in filtered_disks|sort(attribute='total', reverse=true) %}
-            <div class="disk-item">
-                <div class="disk-header">
-                    <div class="disk-icon">
-                        <div class="disk-platter-mini"></div>
-                    </div>
-                    <div class="disk-title">
-                        <div class="disk-name">{{ disk.device if disk.device is defined else '未知设备' }}</div>
-                        <div class="disk-info">
-                            {% if disk.total is defined %}
-                            {% if disk.total is number %}
-                            {{ "%.1f"|format(disk.total/1024/1024/1024) }} GB
-                            {% else %}
-                            {{ "%.1f"|format(disk.total|float/1024/1024/1024) }} GB
-                            {% endif %}
-                            {% endif %}
-                            {% if disk.fstype is defined %}
-                            ({{ disk.fstype }})
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="disk-usage-bar">
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: {{ disk.percent if disk.percent is defined else 0 }}%">
-                        </div>
-                    </div>
-                    <div class="disk-usage-text">
-                        {% if disk.used is defined and disk.total is defined %}
-                        {{ "%.1f"|format(disk.used|float/1024/1024/1024) }} GB / {{
-                        "%.1f"|format(disk.total|float/1024/1024/1024) }} GB ({{ disk.percent if disk.percent is defined
-                        else 0 }}%)
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="alert alert-info">无可用存储设备数据（>50GB）</div>
-            {% endif %}
-        </div>
-    </div>
-    </div>
+    let lastNet = null;
+    let lastNetTime = Date.now();
 
-    <!-- 引入Chart.js库 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    
-    <script>
-        // 确保Chart.js加载完成后再执行初始化
-        if (typeof Chart === 'undefined') {
-            window.addEventListener('load', function() {
-                console.log('Chart.js已加载');
-            });
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('zh-CN', { hour12: false });
+        const dateString = now.toLocaleDateString('zh-CN');
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+            timeElement.textContent = `${dateString} ${timeString}`;
         }
-    </script>
+    }
 
-    <script>
-        // 在CPU核心上添加鼠标悬停效果
-        document.querySelectorAll('.chip-core').forEach(core => {
-            core.addEventListener('mouseenter', () => {
-                core.style.transform = 'translateY(-5px) scale(1.05)';
-                core.style.boxShadow = '0 0 20px rgba(0, 195, 255, 0.6)';
-            });
-
-            core.addEventListener('mouseleave', () => {
-                core.style.transform = '';
-                core.style.boxShadow = '';
-            });
-        });
-
-        // 更新当前时间
-        function updateTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString();
-            const dateString = now.toLocaleDateString();
-
-            const timeElement = document.getElementById('current-time');
-            if (timeElement) {
-                timeElement.textContent = `${dateString} ${timeString}`;
-            }
-        }
-
-        // 每秒更新时间，每5秒刷新数据
-        setInterval(updateTime, 1000);
-        updateTime();
-
-        // 初始化GPU风扇动画
-        document.querySelectorAll('.gpu-fan').forEach(fan => {
-            setInterval(() => {
-                fan.style.transform = `rotate(${Math.floor(Date.now() / 10) % 360}deg)`;
-            }, 16); // 约60fps的更新率
-        });
-
-        // 初始化硬盘旋转动画
-        document.querySelectorAll('.disk-platter').forEach(platter => {
-            setInterval(() => {
-                platter.style.transform = `rotate(${Math.floor(Date.now() / 30) % 360}deg)`;
-            }, 16);
-        });
-
-        // 添加磁盘悬停效果
-        document.querySelectorAll('.disk-device').forEach(disk => {
-            disk.addEventListener('mouseenter', () => {
-                disk.style.transform = 'translateY(-5px)';
-                disk.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.4)';
-            });
-
-            disk.addEventListener('mouseleave', () => {
-                disk.style.transform = '';
-                disk.style.boxShadow = '';
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
-            // 移除旧的GPU卡片部分（如果存在）
-            const gpuCardsOld = document.querySelector('h2[style="text-align: center; color: #00c3ff; margin-top: 40px;"]:contains("显卡状态")');
-            if (gpuCardsOld) {
-                const nextElement = gpuCardsOld.nextElementSibling;
-                if (nextElement && nextElement.classList.contains('gpu-cards')) {
-                    gpuCardsOld.remove();
-                    nextElement.remove();
-                }
-            }
-
-            // 移除旧的存储设备部分（如果存在）
-            const storageOld = document.querySelector('h2[style="text-align: center; color: #00c3ff; margin-top: 40px;"]:contains("存储设备")');
-            if (storageOld) {
-                const nextElement = storageOld.nextElementSibling;
-                if (nextElement && nextElement.classList.contains('storage-devices')) {
-                    storageOld.remove();
-                    nextElement.remove();
-                }
-            }
-        });
-
-        // GPU温度图表存储
-        const gpuTempCharts = {};
-        
-        // 初始化GPU温度图表
-        function initGPUTempCharts() {
-            // 确保Chart.js已加载
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js未加载，等待加载...');
-                setTimeout(initGPUTempCharts, 100);
-                return;
-            }
-            
-            document.querySelectorAll('.gpu-temp-chart').forEach(canvas => {
-                const gpuIndex = canvas.getAttribute('data-gpu-index');
-                if (gpuIndex === null) return;
-                
-                const ctx = canvas.getContext('2d');
-                gpuTempCharts[gpuIndex] = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'GPU温度 (°C)',
-                            data: [],
-                            borderColor: '#ff3860',
-                            backgroundColor: 'rgba(255, 56, 96, 0.1)',
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 2,
-                            pointHoverRadius: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: {
-                            duration: 500
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.05)'
-                                },
-                                ticks: {
-                                    color: '#e9ecef'
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: '#e9ecef'
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: true,
-                                labels: {
-                                    color: '#e9ecef'
-                                }
-                            }
+    function createLineChart(canvasId, datasets, extraOptions = {}) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+        return new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                    mode: 'nearest',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: '#9bb0c3'
                         }
                     }
-                });
-            });
-        }
-        
-        // 精确计算CPU芯片容器尺寸
-        document.addEventListener('DOMContentLoaded', function() {
-            // 获取CPU核心数量
-            const coreCount = document.querySelectorAll('.chip-core').length;
-            const coresContainer = document.querySelector('.chip-cores');
-            const cpuChip = document.querySelector('.cpu-chip');
-            
-            if (!coresContainer || !cpuChip) return;
-            
-            // 根据核心数量调整核心尺寸
-            let coreHeight = 45; // 基础核心高度
-            
-            // 根据核心数量设置不同的核心高度
-            if (coreCount > 24) {
-                coreHeight = 40;
-                // 适应24核以上
-                document.querySelectorAll('.chip-core').forEach(core => {
-                    core.style.minHeight = '40px';
-                    
-                    const usageElem = core.querySelector('.core-usage');
-                    if (usageElem) {
-                        usageElem.style.fontSize = '0.8rem';
-                        usageElem.style.paddingTop = '6px';
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#9bb0c3' },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: { color: '#9bb0c3' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
                     }
-                    
-                    const tempElem = core.querySelector('.core-temp');
-                    if (tempElem) {
-                        tempElem.style.fontSize = '0.6rem';
-                        tempElem.style.padding = '1px 2px';
-                        tempElem.style.marginTop = '1px';
-                    }
-                });
-            } else if (coreCount > 16) {
-                coreHeight = 42;
-                // 适应16-24个核心
-                document.querySelectorAll('.chip-core').forEach(core => {
-                    core.style.minHeight = '42px';
-                    
-                    const usageElem = core.querySelector('.core-usage');
-                    if (usageElem) {
-                        usageElem.style.fontSize = '0.82rem';
-                        usageElem.style.paddingTop = '7px';
-                    }
-                    
-                    const tempElem = core.querySelector('.core-temp');
-                    if (tempElem) {
-                        tempElem.style.fontSize = '0.62rem';
-                    }
-                });
+                },
+                ...extraOptions
             }
-            
-            // 精确计算需要的行数
-            const rowCount = Math.ceil(coreCount / 8); // 保持8列
-            
-            // 精确计算芯片容器高度 - 减少额外空间
-            const rowGap = 2; // 行间距
-            const topPadding = 65; // 降低顶部内边距
-            const bottomPadding = 15; // 降低底部内边距
-            
-            // 精确计算需要的高度
-            const exactHeight = topPadding + (coreHeight * rowCount) + (rowGap * (rowCount - 1)) + bottomPadding;
-            
-            // 设置芯片高度 - 仅增加5%的额外空间确保不会过紧
-            cpuChip.style.minHeight = `${Math.ceil(exactHeight * 1.05)}px`;
-            
-            // 添加精确检测和调整
-            setTimeout(() => {
-                try {
-                    const chipRect = cpuChip.getBoundingClientRect();
-                    const coresRect = coresContainer.getBoundingClientRect();
-                    
-                    // 检查核心是否超出容器
-                    if (coresRect.bottom > chipRect.bottom - 10) {
-                        // 核心区域超出芯片区域，精确增加芯片高度
-                        const extraSpace = coresRect.bottom - chipRect.bottom + 15; // 仅增加必要的空间
-                        const currentHeight = parseFloat(cpuChip.style.minHeight) || exactHeight;
-                        cpuChip.style.minHeight = `${currentHeight + extraSpace}px`;
-                    }
-                    
-                    // 检查是否有过多空间
-                    if (chipRect.bottom > coresRect.bottom + 30) {
-                        // 芯片区域比核心区域大太多，缩小芯片高度
-                        const excessSpace = chipRect.bottom - coresRect.bottom - 20; // 保留20px的底部空间
-                        const currentHeight = parseFloat(cpuChip.style.minHeight) || exactHeight;
-                        cpuChip.style.minHeight = `${Math.max(exactHeight, currentHeight - excessSpace)}px`;
-                    }
-                } catch (e) {
-                    console.error("Error adjusting CPU chip size:", e);
-                }
-            }, 100);
         });
-        
-        // 初始化GPU温度图表（等待Chart.js加载完成）
-        function initGPUTempChartsWhenReady() {
-            if (typeof Chart !== 'undefined') {
-                initGPUTempCharts();
-            } else {
-                console.log('等待Chart.js加载...');
-                setTimeout(initGPUTempChartsWhenReady, 100);
-            }
-        }
-        
-        // 在DOM加载完成后初始化
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                initGPUTempChartsWhenReady();
+    }
+
+    function pushChartPoint(chart, label, values, metaValues = []) {
+        if (!chart) return;
+        if (chart.data.labels.length >= HISTORY_LIMIT) {
+            chart.data.labels.shift();
+            chart.data.datasets.forEach(dataset => {
+                dataset.data.shift();
+                if (Array.isArray(dataset.coreIndex)) {
+                    dataset.coreIndex.shift();
+                }
             });
-        } else {
-            initGPUTempChartsWhenReady();
         }
-
-        // 添加网络速度监控
-        let lastRxBytes = 0;
-        let lastTxBytes = 0;
-        let lastNetworkTime = Date.now();
-
-        // 格式化网络速度
-        function formatNetworkSpeed(bytesPerSecond) {
-            if (bytesPerSecond < 1024) {
-                return `${bytesPerSecond.toFixed(1)} B/s`;
-            } else if (bytesPerSecond < 1024 * 1024) {
-                return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
-            } else {
-                return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
+        chart.data.labels.push(label);
+        values.forEach((value, index) => {
+            if (chart.data.datasets[index]) {
+                chart.data.datasets[index].data.push(value);
+                if (Array.isArray(chart.data.datasets[index].coreIndex)) {
+                    const metaValue = metaValues[index] ?? null;
+                    chart.data.datasets[index].coreIndex.push(metaValue);
+                }
             }
-        }
+        });
+        chart.update('none');
+    }
 
-        // 更新GPU圆环显示的函数
-        async function refreshData() {
-            try {
-                const response = await fetch('/api/hardware_info');
-                const data = await response.json();
-                
-                // 更新CPU核心信息
-                // ... 现有的CPU更新代码 ...
-                
-                // 更新内存信息
-                if (data.memory) {
-                    // 更新内存圆圈
-                    const memoryCircle = document.querySelector('.memory-circle');
-                    const memoryPercent = document.querySelector('.memory-percent');
-                    
-                    if (memoryCircle && data.memory.percent !== undefined) {
-                        memoryCircle.style.setProperty('--memory-percent', `${data.memory.percent}%`);
+    function formatSpeed(bytesPerSecond) {
+        if (bytesPerSecond < 1024) {
+            return `${bytesPerSecond.toFixed(1)} B/s`;
+        }
+        if (bytesPerSecond < 1024 * 1024) {
+            return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+        }
+        return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`;
+    }
+
+    function calcAvgCoreTemp(temps) {
+        const entries = Object.entries(temps || {}).filter(([name]) => name.toLowerCase().includes('core'));
+        let sum = 0;
+        let count = 0;
+        entries.forEach(([_, value]) => {
+            const tempValue = typeof value === 'object' && value !== null ? value.value : value;
+            if (typeof tempValue === 'number') {
+                sum += tempValue;
+                count += 1;
+            }
+        });
+        return count > 0 ? sum / count : null;
+    }
+
+    function getSortedCoreTemps(temps) {
+        const entries = Object.entries(temps || {})
+            .filter(([name]) => name.toLowerCase().includes('core'))
+            .map(([name, value]) => {
+                const match = name.match(/(\d+)/);
+                return {
+                    index: match ? parseInt(match[1], 10) : 0,
+                    value: typeof value === 'object' && value !== null ? value.value : value
+                };
+            })
+            .sort((a, b) => a.index - b.index);
+        return entries.map(entry => entry.value);
+    }
+
+    function getGpuPalette(index) {
+        const base = (index * 60) % 360;
+        return {
+            load: `hsl(${base}, 80%, 60%)`,
+            mem: `hsl(${(base + 25) % 360}, 80%, 60%)`,
+            temp: `hsl(${(base + 50) % 360}, 80%, 65%)`,
+            loadBg: `hsla(${base}, 80%, 60%, 0.12)`,
+            memBg: `hsla(${(base + 25) % 360}, 80%, 60%, 0.12)`,
+            tempBg: `hsla(${(base + 50) % 360}, 80%, 65%, 0.12)`
+        };
+    }
+
+    function initCharts() {
+        charts.cpu = createLineChart('cpu-chart', [
+            {
+                label: 'CPU使用率(%)',
+                data: [],
+                borderColor: '#4cc9f0',
+                backgroundColor: 'rgba(76, 201, 240, 0.15)',
+                tension: 0.3,
+                fill: true
+            },
+            {
+                label: '平均温度(°C)',
+                data: [],
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.12)',
+                tension: 0.3,
+                fill: false,
+                yAxisID: 'y1'
+            },
+            {
+                label: '最高核心使用率(%)',
+                data: [],
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                tension: 0.3,
+                fill: false,
+                coreIndex: []
+            },
+            {
+                label: '最低核心使用率(%)',
+                data: [],
+                borderColor: '#7fd3a8',
+                backgroundColor: 'rgba(127, 211, 168, 0.12)',
+                tension: 0.3,
+                fill: false,
+                coreIndex: []
+            }
+        ], {
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'center',
+                    labels: {
+                        color: '#9bb0c3',
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        padding: 6,
+                        font: {
+                            size: 10
+                        }
                     }
-                    
-                    if (memoryPercent && data.memory.percent !== undefined) {
-                        memoryPercent.textContent = `${data.memory.percent}%`;
-                    }
-                    
-                    // 更新内存详情
-                    const memoryDetails = document.querySelector('.memory-details');
-                    if (memoryDetails && data.memory.used !== undefined && data.memory.total !== undefined) {
-                        // 转换为GB (字节 / 1073741824 = GB)
-                        const used = (data.memory.used / 1073741824).toFixed(1);
-                        const total = (data.memory.total / 1073741824).toFixed(1);
-                        memoryDetails.textContent = `已用: ${used} GB / 总计: ${total} GB`;
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const dataset = context.dataset || {};
+                            const value = typeof context.parsed.y === 'number' ? context.parsed.y.toFixed(1) : context.formattedValue;
+                            let label = `${dataset.label}: ${value}`;
+                            if (Array.isArray(dataset.coreIndex)) {
+                                const coreIndex = dataset.coreIndex[context.dataIndex];
+                                if (coreIndex !== null && coreIndex !== undefined) {
+                                    label += ` (Core ${coreIndex})`;
+                                }
+                            }
+                            return label;
+                        }
                     }
                 }
-                
-                // 更新内存频率信息
-                if (data.memory) {
-                    if (data.memory.type) {
-                        document.getElementById('memory-type').textContent = data.memory.type;
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: '使用率(%)',
+                        color: '#4cc9f0',
+                        font: { size: 10, weight: '600' }
+                    },
+                    ticks: {
+                        color: '#9bb0c3',
+                        callback: (value) => `${value}%`
                     }
-                    if (data.memory.frequency) {
-                        document.getElementById('memory-frequency').textContent = `${data.memory.frequency} MHz`;
-                    }
-                    if (data.memory.channels) {
-                        document.getElementById('memory-channels').textContent = data.memory.channels;
+                },
+                y1: {
+                    position: 'right',
+                    min: 0,
+                    max: 100,
+                    grid: { drawOnChartArea: false },
+                    title: {
+                        display: true,
+                        text: '温度(°C)',
+                        color: '#ffb74d',
+                        font: { size: 10, weight: '600' }
+                    },
+                    ticks: {
+                        color: '#9bb0c3',
+                        callback: (value) => `${value}°C`
                     }
                 }
-                
-                // 更新GPU信息，使用圆环显示
-                if (data.gpu && Array.isArray(data.gpu) && data.gpu.length > 0) {
-                    const gpuCards = document.querySelectorAll('.gpu-card');
-                    
-                    data.gpu.forEach((gpu, index) => {
-                        if (index < gpuCards.length && gpu) {
-                            const card = gpuCards[index];
-                            
-                            // 更新GPU利用率圆环
-                            const usage = Math.round(gpu.load || 0);
-                            const clampedUsage = Math.max(0, Math.min(100, usage));
-                            const usageAngle = (clampedUsage / 100) * 360;
-                            
-                            // 更新显示数值
-                            const gpuGaugeValue = card.querySelector('.gpu-gauge:first-child .gpu-gauge-value');
-                            if (gpuGaugeValue) {
-                                gpuGaugeValue.textContent = `${clampedUsage}%`;
-                            }
-                            
-                            // 更新圆环（使用CSS变量）
-                            const gpuGaugeCircle = card.querySelector('.gpu-gauge:first-child .gpu-gauge-circle');
-                            if (gpuGaugeCircle) {
-                                gpuGaugeCircle.style.setProperty('--gpu-percent', `${usageAngle}deg`);
-                            }
-                            
-                            // 更新显存利用率圆环
-                            if (gpu.memory && typeof gpu.memory.percent !== 'undefined') {
-                                const memUsage = Math.round(gpu.memory.percent);
-                                const clampedMemUsage = Math.max(0, Math.min(100, memUsage));
-                                const memUsageAngle = (clampedMemUsage / 100) * 360;
-                                
-                                // 更新显示数值
-                                const memGaugeValue = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-value');
-                                if (memGaugeValue) {
-                                    memGaugeValue.textContent = `${clampedMemUsage}%`;
-                                }
-                                
-                                // 更新圆环（使用CSS变量）
-                                const memGaugeCircle = card.querySelector('.gpu-gauge:nth-child(2) .gpu-gauge-circle');
-                                if (memGaugeCircle) {
-                                    memGaugeCircle.style.setProperty('--gpu-percent', `${memUsageAngle}deg`);
-                                }
-                            }
-                            
-                            // 更新温度
-                            const tempElement = card.querySelector('.gpu-temp-value');
-                            if (tempElement && typeof gpu.temperature !== 'undefined' && gpu.temperature !== null) {
-                                tempElement.textContent = `${Math.round(gpu.temperature)}°C`;
-                                
-                                // 更新温度指示器
-                                const tempIndicator = card.querySelector('.gpu-temp-indicator');
-                                if (tempIndicator) {
-                                    const temp = Math.round(gpu.temperature);
-                                    let color = '#00ff00';
-                                    
-                                    if (temp >= 80) color = '#ff0000';
-                                    else if (temp >= 70) color = '#ff9900';
-                                    else if (temp >= 60) color = '#ffff00';
-                                    
-                                    tempIndicator.style.backgroundColor = color;
-                                    
-                                    // 更新温度类名
-                                    tempElement.classList.remove('temp-high', 'temp-medium', 'temp-normal');
-                                    if (temp >= 80) tempElement.classList.add('temp-high');
-                                    else if (temp >= 70) tempElement.classList.add('temp-medium');
-                                    else tempElement.classList.add('temp-normal');
-                                }
-                            }
-                            
-                            // 更新GPU温度曲线图表
-                            if (gpu.temperature !== undefined && gpu.temperature !== null) {
-                                const chart = gpuTempCharts[index];
-                                if (chart) {
-                                    const now = new Date().toLocaleTimeString();
-                                    
-                                    // 限制数据点数量（保留最近20个点）
-                                    if (chart.data.labels.length >= 20) {
-                                        chart.data.labels.shift();
-                                        chart.data.datasets[0].data.shift();
-                                    }
-                                    
-                                    chart.data.labels.push(now);
-                                    chart.data.datasets[0].data.push(Math.round(gpu.temperature));
-                                    
-                                    // 动态调整Y轴范围（根据当前数据范围）
-                                    if (chart.data.datasets[0].data.length > 0) {
-                                        const minTemp = Math.min(...chart.data.datasets[0].data) - 5;
-                                        const maxTemp = Math.max(...chart.data.datasets[0].data) + 5;
-                                        chart.options.scales.y.min = Math.max(0, minTemp);
-                                        chart.options.scales.y.max = maxTemp;
-                                    }
-                                    
-                                    chart.update('none'); // 不使用动画以提升性能
-                                } else {
-                                    console.warn(`GPU ${index} 的温度图表未初始化`);
-                                }
-                            }
-                            
-                            // 记录到控制台以帮助调试
-                            console.log(`GPU ${index} 数据:`, {
-                                name: gpu.name,
-                                load: gpu.load,
-                                memPercent: gpu.memory?.percent,
-                                temp: gpu.temperature
-                            });
+            }
+        });
+
+        charts.memory = createLineChart('memory-chart', [
+            {
+                label: '已用内存(GB)',
+                data: [],
+                borderColor: '#20c997',
+                backgroundColor: 'rgba(32, 201, 151, 0.12)',
+                tension: 0.3,
+                fill: false
+            },
+            {
+                label: '剩余内存(GB)',
+                data: [],
+                borderColor: '#4cc9f0',
+                backgroundColor: 'rgba(76, 201, 240, 0.12)',
+                tension: 0.3,
+                fill: false
+            },
+            {
+                label: '内存使用率(%)',
+                data: [],
+                borderColor: '#ffb74d',
+                backgroundColor: 'rgba(255, 183, 77, 0.12)',
+                tension: 0.3,
+                fill: false,
+                yAxisID: 'y1'
+            }
+        ], {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#9bb0c3',
+                        callback: (value) => `${value} GB`
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        color: '#9bb0c3',
+                        callback: (value) => `${value}%`
+                    },
+                    title: {
+                        display: true,
+                        text: '使用率(%)',
+                        color: '#ffb74d',
+                        font: { size: 10, weight: '600' }
+                    }
+                }
+            }
+        });
+
+        charts.disk = null;
+
+        charts.network = createLineChart('network-chart', [
+            {
+                label: '下载(KB/s)',
+                data: [],
+                borderColor: '#4cc9f0',
+                backgroundColor: 'rgba(76, 201, 240, 0.12)',
+                tension: 0.3,
+                fill: false
+            },
+            {
+                label: '上传(KB/s)',
+                data: [],
+                borderColor: '#20c997',
+                backgroundColor: 'rgba(32, 201, 151, 0.12)',
+                tension: 0.3,
+                fill: false
+            }
+        ]);
+
+            const gpuCanvas = document.getElementById('gpu-chart');
+        if (gpuCanvas) {
+            const toggles = Array.from(document.querySelectorAll('.gpu-toggle'));
+            const datasets = [];
+            toggles.forEach((toggle) => {
+                const gpuIndex = parseInt(toggle.dataset.gpuIndex, 10);
+                const palette = getGpuPalette(gpuIndex);
+                datasets.push({
+                    label: `GPU${gpuIndex} 负载(%)`,
+                    data: [],
+                    borderColor: palette.load,
+                    backgroundColor: palette.loadBg,
+                    tension: 0.3,
+                    fill: false,
+                    gpuIndex,
+                    metric: 'load',
+                    yAxisID: 'y',
+                    hidden: !toggle.checked
+                });
+                datasets.push({
+                    label: `GPU${gpuIndex} 显存利用率(%)`,
+                    data: [],
+                    borderColor: palette.mem,
+                    backgroundColor: palette.memBg,
+                    tension: 0.3,
+                    fill: false,
+                    gpuIndex,
+                    metric: 'mem',
+                    yAxisID: 'y',
+                    hidden: !toggle.checked
+                });
+                datasets.push({
+                    label: `GPU${gpuIndex} 温度(°C)`,
+                    data: [],
+                    borderColor: palette.temp,
+                    backgroundColor: palette.tempBg,
+                    tension: 0.3,
+                    fill: false,
+                    gpuIndex,
+                    metric: 'temp',
+                    yAxisID: 'y1',
+                    hidden: !toggle.checked
+                });
+            });
+            charts.gpu = createLineChart('gpu-chart', datasets, {
+                scales: {
+                    y: { min: 0, max: 100 },
+                    y1: {
+                        position: 'right',
+                        min: 0,
+                        max: 100,
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            color: '#9bb0c3',
+                            callback: (value) => `${value}°C`
+                        },
+                        title: {
+                            display: true,
+                            text: '温度(°C)',
+                            color: '#ffb74d',
+                            font: { size: 10, weight: '600' }
+                        }
+                    }
+                }
+            });
+
+            const updateGpuVisibility = (selectedIndex) => {
+                if (!charts.gpu) return;
+                charts.gpu.data.datasets.forEach((dataset) => {
+                    dataset.hidden = dataset.gpuIndex !== selectedIndex;
+                });
+                charts.gpu.update('none');
+            };
+
+            const selectedToggle = toggles.find((toggle) => toggle.checked);
+            if (selectedToggle) {
+                updateGpuVisibility(parseInt(selectedToggle.dataset.gpuIndex, 10));
+            }
+
+            toggles.forEach((toggle) => {
+                toggle.addEventListener('change', () => {
+                    if (!toggle.checked) return;
+                    updateGpuVisibility(parseInt(toggle.dataset.gpuIndex, 10));
+                });
+            });
+        }
+    }
+
+    async function refreshData() {
+        try {
+            const response = await fetch('/api/hardware_info');
+            const data = await response.json();
+            const nowLabel = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+            if (data.cpu) {
+                const totalUsage = data.cpu.total_usage ?? 0;
+                const avgTemp = calcAvgCoreTemp(data.temperatures);
+
+                let maxUsage = null;
+                let minUsage = null;
+                let maxIndex = null;
+                let minIndex = null;
+
+                if (Array.isArray(data.cpu.usage_per_core) && data.cpu.usage_per_core.length) {
+                    data.cpu.usage_per_core.forEach((usage, index) => {
+                        if (typeof usage !== 'number') return;
+                        if (maxUsage === null || usage > maxUsage) {
+                            maxUsage = usage;
+                            maxIndex = index;
+                        }
+                        if (minUsage === null || usage < minUsage) {
+                            minUsage = usage;
+                            minIndex = index;
                         }
                     });
-                } else {
-                    console.log('未检测到GPU数据或数据格式不正确:', data.gpu);
                 }
-                
-                // 更新网络速度
-                if (data.network) {
-                    const now = Date.now();
-                    const timeElapsed = (now - lastNetworkTime) / 1000; // 秒数
-                    
-                    if (lastRxBytes > 0 && timeElapsed > 0) {
-                        const rxSpeed = (data.network.rx_bytes - lastRxBytes) / timeElapsed;
-                        const txSpeed = (data.network.tx_bytes - lastTxBytes) / timeElapsed;
-                        
-                        document.getElementById('download-speed').textContent = formatNetworkSpeed(rxSpeed);
-                        document.getElementById('upload-speed').textContent = formatNetworkSpeed(txSpeed);
-                    }
-                    
-                    lastRxBytes = data.network.rx_bytes;
-                    lastTxBytes = data.network.tx_bytes;
-                    lastNetworkTime = now;
+
+                pushChartPoint(
+                    charts.cpu,
+                    nowLabel,
+                    [
+                        totalUsage,
+                        avgTemp !== null ? avgTemp : 0,
+                        maxUsage !== null ? maxUsage : 0,
+                        minUsage !== null ? minUsage : 0
+                    ],
+                    [null, null, maxIndex, minIndex]
+                );
+
+                if (Array.isArray(data.cpu.usage_per_core)) {
+                    data.cpu.usage_per_core.forEach((usage, index) => {
+                        const coreItem = document.querySelector(`.core-item[data-core-index="${index}"]`);
+                        if (!coreItem) return;
+                        const usageEl = coreItem.querySelector('.core-usage');
+                        if (usageEl) usageEl.textContent = `${usage.toFixed(1)}%`;
+                        coreItem.classList.remove('core-high', 'core-medium', 'core-low');
+                        if (usage >= 80) coreItem.classList.add('core-high');
+                        else if (usage >= 50) coreItem.classList.add('core-medium');
+                        else coreItem.classList.add('core-low');
+                    });
                 }
-                
-            } catch (error) {
-                console.error('获取GPU数据失败:', error);
+
+                const coreTemps = getSortedCoreTemps(data.temperatures);
+                if (coreTemps.length) {
+                    coreTemps.forEach((temp, index) => {
+                        const coreItem = document.querySelector(`.core-item[data-core-index="${index}"] .core-temp`);
+                        if (coreItem && typeof temp === 'number') {
+                            coreItem.textContent = `${temp.toFixed(1)}°C`;
+                        }
+                    });
+                }
             }
+
+            if (data.memory) {
+                const memPercent = data.memory.percent ?? 0;
+                const memProgress = document.getElementById('memory-progress');
+                if (memProgress) memProgress.style.width = `${memPercent}%`;
+
+                const totalBytes = data.memory.total ?? 0;
+                const usedBytes = data.memory.used ?? 0;
+                const freeBytes = data.memory.free ?? Math.max(0, totalBytes - usedBytes);
+
+                const usedGb = totalBytes ? usedBytes / 1073741824 : 0;
+                const freeGb = totalBytes ? freeBytes / 1073741824 : 0;
+
+                if (data.memory.type) {
+                    const el = document.getElementById('memory-type');
+                    if (el) el.textContent = data.memory.type;
+                }
+                if (data.memory.frequency) {
+                    const el = document.getElementById('memory-frequency');
+                    if (el) el.textContent = `${data.memory.frequency} MHz`;
+                }
+                if (data.memory.channels) {
+                    const el = document.getElementById('memory-channels');
+                    if (el) el.textContent = data.memory.channels;
+                }
+                const totalEl = document.getElementById('memory-total');
+                if (totalEl && totalBytes) {
+                    totalEl.textContent = `${(totalBytes / 1073741824).toFixed(1)} GB`;
+                }
+
+                pushChartPoint(charts.memory, nowLabel, [usedGb, freeGb, memPercent]);
+            }
+
+            if (data.disk && Array.isArray(data.disk)) {
+                const minBytes = 50 * 1024 * 1024 * 1024;
+                let total = 0;
+                let used = 0;
+                data.disk.forEach(disk => {
+                    if (disk.total !== undefined && disk.used !== undefined) {
+                        const t = typeof disk.total === 'number' ? disk.total : parseFloat(disk.total);
+                        const u = typeof disk.used === 'number' ? disk.used : parseFloat(disk.used);
+                        if (!Number.isNaN(t) && !Number.isNaN(u) && t >= minBytes) {
+                            total += t;
+                            used += u;
+                        }
+                    }
+                });
+                const percent = total > 0 ? (used / total) * 100 : 0;
+                const diskPercentEl = document.getElementById('disk-percent');
+                if (diskPercentEl) {
+                    diskPercentEl.textContent = `${percent.toFixed(1)}%`;
+                }
+            }
+
+            if (data.network) {
+                let rxSpeed = data.network.rx_speed;
+                let txSpeed = data.network.tx_speed;
+                if (typeof rxSpeed !== 'number' || typeof txSpeed !== 'number') {
+                    const now = Date.now();
+                    if (lastNet) {
+                        const timeDiff = (now - lastNetTime) / 1000;
+                        if (timeDiff > 0) {
+                            rxSpeed = (data.network.rx_bytes - lastNet.rx_bytes) / timeDiff;
+                            txSpeed = (data.network.tx_bytes - lastNet.tx_bytes) / timeDiff;
+                        }
+                    }
+                    lastNet = { rx_bytes: data.network.rx_bytes, tx_bytes: data.network.tx_bytes };
+                    lastNetTime = now;
+                }
+
+                const downEl = document.getElementById('network-down');
+                const upEl = document.getElementById('network-up');
+                if (downEl && typeof rxSpeed === 'number') downEl.textContent = formatSpeed(rxSpeed);
+                if (upEl && typeof txSpeed === 'number') upEl.textContent = formatSpeed(txSpeed);
+
+                const downKb = typeof rxSpeed === 'number' ? rxSpeed / 1024 : 0;
+                const upKb = typeof txSpeed === 'number' ? txSpeed / 1024 : 0;
+                pushChartPoint(charts.network, nowLabel, [downKb, upKb]);
+            }
+
+            if (data.gpu && Array.isArray(data.gpu) && charts.gpu) {
+                const values = charts.gpu.data.datasets.map((dataset) => {
+                    const gpuIndex = dataset.gpuIndex;
+                    const gpu = data.gpu[gpuIndex];
+                    if (!gpu) return 0;
+                    if (dataset.metric === 'load') {
+                        return typeof gpu.load === 'number' ? gpu.load : 0;
+                    }
+                    if (dataset.metric === 'mem') {
+                        return gpu.memory && typeof gpu.memory.percent === 'number' ? gpu.memory.percent : 0;
+                    }
+                    if (dataset.metric === 'temp') {
+                        return typeof gpu.temperature === 'number' ? gpu.temperature : 0;
+                    }
+                    return 0;
+                });
+
+                if (charts.gpu.data.labels.length >= HISTORY_LIMIT) {
+                    charts.gpu.data.labels.shift();
+                    charts.gpu.data.datasets.forEach((dataset) => dataset.data.shift());
+                }
+                charts.gpu.data.labels.push(nowLabel);
+                charts.gpu.data.datasets.forEach((dataset, index) => {
+                    dataset.data.push(values[index]);
+                });
+                charts.gpu.update('none');
+            }
+        } catch (error) {
+            console.error('获取硬件数据失败:', error);
         }
+    }
 
-        // 定时刷新数据
+    document.addEventListener('DOMContentLoaded', () => {
+        updateTime();
+        setInterval(updateTime, 1000);
+        initCharts();
+        refreshData();
         setInterval(refreshData, 5000);
-        refreshData(); // 立即执行一次
-    </script>
+    });
+</script>
 </body>
-
 </html>
