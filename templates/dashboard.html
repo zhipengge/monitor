@@ -326,6 +326,100 @@
             accent-color: var(--accent);
         }
 
+        .gpu-donuts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .memory-visual {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .memory-donut {
+            flex: 0 0 170px;
+            height: 170px;
+        }
+
+        .memory-donut .donut-card {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .memory-donut .donut-title {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .memory-donut .donut-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .memory-donut .donut-chart {
+            width: 100%;
+            max-width: 120px;
+            aspect-ratio: 1 / 1;
+        }
+
+        .memory-chart {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .memory-chart .chart {
+            height: 170px;
+        }
+
+        @media (max-width: 600px) {
+            .memory-visual {
+                flex-direction: column;
+            }
+            .memory-donut {
+                flex: none;
+                width: 100%;
+                max-width: 220px;
+                height: auto;
+            }
+            .memory-donut .donut-card {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 1 / 1;
+            }
+        }
+
+        .donut-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .donut-title {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .donut-chart {
+            height: 120px;
+        }
+
+        .donut-value {
+            margin-top: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
         .muted {
             color: var(--muted);
         }
@@ -404,11 +498,21 @@
                 </h2>
                 <div class="card-subtitle">实时使用情况</div>
             </div>
-            <div class="progress">
-                <div class="progress-bar" id="memory-progress" style="width: {{ memory.percent if memory and memory.percent is defined else 0 }}%"></div>
-            </div>
-            <div class="chart chart-sm">
-                <canvas id="memory-chart"></canvas>
+            <div class="memory-visual">
+                <div class="memory-donut">
+                    <div class="donut-card">
+                        <div class="donut-title">内存使用率</div>
+                        <div class="donut-chart">
+                            <canvas id="memory-usage-donut"></canvas>
+                        </div>
+                        <div class="donut-value" id="memory-usage-value">0%</div>
+                    </div>
+                </div>
+                <div class="memory-chart">
+                    <div class="chart chart-sm">
+                        <canvas id="memory-chart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -428,6 +532,22 @@
             </div>
             <div class="chart chart-sm">
                 <canvas id="gpu-chart"></canvas>
+            </div>
+            <div class="gpu-donuts">
+                <div class="donut-card">
+                    <div class="donut-title">GPU利用率</div>
+                    <div class="donut-chart">
+                        <canvas id="gpu-usage-donut"></canvas>
+                    </div>
+                    <div class="donut-value" id="gpu-usage-value">0%</div>
+                </div>
+                <div class="donut-card">
+                    <div class="donut-title">显存利用率</div>
+                    <div class="donut-chart">
+                        <canvas id="gpu-mem-donut"></canvas>
+                    </div>
+                    <div class="donut-value" id="gpu-mem-value">0%</div>
+                </div>
             </div>
             {% else %}
             <div class="muted">未检测到GPU</div>
@@ -515,11 +635,15 @@
         memory: null,
         disk: null,
         network: null,
-        gpu: null
+        gpu: null,
+        memoryDonut: null,
+        gpuUsageDonut: null,
+        gpuMemDonut: null
     };
 
     let lastNet = null;
     let lastNetTime = Date.now();
+    let lastGpuData = [];
 
     function updateTime() {
         const now = new Date();
@@ -645,6 +769,60 @@
         };
     }
 
+    function getSelectedGpuIndex() {
+        const selected = document.querySelector('.gpu-toggle:checked');
+        return selected ? parseInt(selected.dataset.gpuIndex, 10) : 0;
+    }
+
+    function createDonutChart(canvasId, color) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+        return new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['使用', '剩余'],
+                datasets: [{
+                    data: [0, 100],
+                    backgroundColor: [color, 'rgba(255,255,255,0.08)'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.label}: ${context.parsed}%`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateGpuDonuts(selectedIndex) {
+        const gpu = lastGpuData[selectedIndex];
+        const usage = gpu && typeof gpu.load === 'number' ? gpu.load : 0;
+        const mem = gpu && gpu.memory && typeof gpu.memory.percent === 'number' ? gpu.memory.percent : 0;
+
+        if (charts.gpuUsageDonut) {
+            charts.gpuUsageDonut.data.datasets[0].data = [usage, Math.max(0, 100 - usage)];
+            charts.gpuUsageDonut.update('none');
+        }
+        if (charts.gpuMemDonut) {
+            charts.gpuMemDonut.data.datasets[0].data = [mem, Math.max(0, 100 - mem)];
+            charts.gpuMemDonut.update('none');
+        }
+        const usageEl = document.getElementById('gpu-usage-value');
+        if (usageEl) usageEl.textContent = `${usage.toFixed(1)}%`;
+        const memEl = document.getElementById('gpu-mem-value');
+        if (memEl) memEl.textContent = `${mem.toFixed(1)}%`;
+    }
+
     function initCharts() {
         charts.cpu = createLineChart('cpu-chart', [
             {
@@ -669,15 +847,6 @@
                 data: [],
                 borderColor: '#ef4444',
                 backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                tension: 0.3,
-                fill: false,
-                coreIndex: []
-            },
-            {
-                label: '最低核心使用率',
-                data: [],
-                borderColor: '#7fd3a8',
-                backgroundColor: 'rgba(127, 211, 168, 0.12)',
                 tension: 0.3,
                 fill: false,
                 coreIndex: []
@@ -751,50 +920,18 @@
 
         charts.memory = createLineChart('memory-chart', [
             {
-                label: '已用内存',
-                data: [],
-                borderColor: '#20c997',
-                backgroundColor: 'rgba(32, 201, 151, 0.12)',
-                tension: 0.3,
-                fill: false
-            },
-            {
-                label: '剩余内存',
-                data: [],
-                borderColor: '#4cc9f0',
-                backgroundColor: 'rgba(76, 201, 240, 0.12)',
-                tension: 0.3,
-                fill: false
-            },
-            {
                 label: '内存使用率',
                 data: [],
                 borderColor: '#ffb74d',
                 backgroundColor: 'rgba(255, 183, 77, 0.12)',
                 tension: 0.3,
-                fill: false,
-                yAxisID: 'y1'
+                fill: false
             }
         ], {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        color: '#9bb0c3',
-                        callback: (value) => `${value} GB`
-                    },
-                    title: {
-                        display: true,
-                        text: '内存(GB)',
-                        color: '#20c997',
-                        font: { size: 10, weight: '600' }
-                    }
-                },
-                y1: {
-                    position: 'right',
-                    beginAtZero: true,
                     max: 100,
-                    grid: { drawOnChartArea: false },
                     ticks: {
                         color: '#9bb0c3',
                         callback: (value) => `${value}%`
@@ -931,6 +1068,7 @@
                     dataset.hidden = dataset.gpuIndex !== selectedIndex;
                 });
                 charts.gpu.update('none');
+                updateGpuDonuts(selectedIndex);
             };
 
             const selectedToggle = toggles.find((toggle) => toggle.checked);
@@ -945,6 +1083,10 @@
                 });
             });
         }
+
+        charts.memoryDonut = createDonutChart('memory-usage-donut', '#20c997');
+        charts.gpuUsageDonut = createDonutChart('gpu-usage-donut', '#4cc9f0');
+        charts.gpuMemDonut = createDonutChart('gpu-mem-donut', '#20c997');
     }
 
     async function refreshData() {
@@ -958,9 +1100,7 @@
                 const avgTemp = calcAvgCoreTemp(data.temperatures);
 
                 let maxUsage = null;
-                let minUsage = null;
                 let maxIndex = null;
-                let minIndex = null;
 
                 if (Array.isArray(data.cpu.usage_per_core) && data.cpu.usage_per_core.length) {
                     data.cpu.usage_per_core.forEach((usage, index) => {
@@ -968,10 +1108,6 @@
                         if (maxUsage === null || usage > maxUsage) {
                             maxUsage = usage;
                             maxIndex = index;
-                        }
-                        if (minUsage === null || usage < minUsage) {
-                            minUsage = usage;
-                            minIndex = index;
                         }
                     });
                 }
@@ -982,10 +1118,9 @@
                     [
                         totalUsage,
                         avgTemp !== null ? avgTemp : 0,
-                        maxUsage !== null ? maxUsage : 0,
-                        minUsage !== null ? minUsage : 0
+                        maxUsage !== null ? maxUsage : 0
                     ],
-                    [null, null, maxIndex, minIndex]
+                    [null, null, maxIndex]
                 );
 
                 if (Array.isArray(data.cpu.usage_per_core)) {
@@ -1014,15 +1149,7 @@
 
             if (data.memory) {
                 const memPercent = data.memory.percent ?? 0;
-                const memProgress = document.getElementById('memory-progress');
-                if (memProgress) memProgress.style.width = `${memPercent}%`;
-
                 const totalBytes = data.memory.total ?? 0;
-                const usedBytes = data.memory.used ?? 0;
-                const freeBytes = data.memory.free ?? Math.max(0, totalBytes - usedBytes);
-
-                const usedGb = totalBytes ? usedBytes / 1073741824 : 0;
-                const freeGb = totalBytes ? freeBytes / 1073741824 : 0;
 
                 if (data.memory.type) {
                     const el = document.getElementById('memory-type');
@@ -1041,7 +1168,14 @@
                     totalEl.textContent = `${(totalBytes / 1073741824).toFixed(1)} GB`;
                 }
 
-                pushChartPoint(charts.memory, nowLabel, [usedGb, freeGb, memPercent]);
+                if (charts.memoryDonut) {
+                    charts.memoryDonut.data.datasets[0].data = [memPercent, Math.max(0, 100 - memPercent)];
+                    charts.memoryDonut.update('none');
+                }
+                const memValueEl = document.getElementById('memory-usage-value');
+                if (memValueEl) memValueEl.textContent = `${memPercent.toFixed(1)}%`;
+
+                pushChartPoint(charts.memory, nowLabel, [memPercent]);
             }
 
             if (data.disk && Array.isArray(data.disk)) {
@@ -1095,6 +1229,7 @@
             }
 
             if (data.gpu && Array.isArray(data.gpu) && charts.gpu) {
+                lastGpuData = data.gpu;
                 const values = charts.gpu.data.datasets.map((dataset) => {
                     const gpuIndex = dataset.gpuIndex;
                     const gpu = data.gpu[gpuIndex];
@@ -1120,6 +1255,7 @@
                     dataset.data.push(values[index]);
                 });
                 charts.gpu.update('none');
+                updateGpuDonuts(getSelectedGpuIndex());
             }
         } catch (error) {
             console.error('获取硬件数据失败:', error);
